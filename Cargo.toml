@@ -6,4 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+redis = "0.22.3"
 rocket = "0.5.0-rc.1"
+tokio = "1.26.0"
