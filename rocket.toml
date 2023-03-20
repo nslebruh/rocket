@@ -1,0 +1,2 @@
+[default.databases.mysql_test]
+url = "mysql://root:6jb1Uu2ycjJoLMgf3cgg@containers-us-west-28.railway.app:6089/railway"
