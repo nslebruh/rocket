@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    .header {
+      background-color: rgb(82, 82, 82);
+      height: 4rem;
+    }
+    ul {
+      list-style-type: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .li-header {
+      width: 20%;
+      display: flex;
+      cursor: pointer;
+      font-size: large;
+      justify-content: center;
+      background-color: gray;
+    }
+    li {
+      display: flex;
+      width: 100%
+    }
+    .row {
+      height: 6rem;
+      justify-items: center;
+    }
+    .row>span {
+      width: 20%;
+      justify-content: center;
+      display: flex;
+    }
+    .floss {
+      max-width: 10%;
+    }
+    .name {
+      min-width: 40%
+    }
+    .button {
+
+    }
+    .amount {
+      max-width: 10%;
+    }
+    .color {
+      
+    }
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1;
+    }
+
+    .popup-form {
+      opacity: 0;
+      visibility: hidden;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: #f1f1f1;
+      border: 1px solid #ccc;
+      transition: opacity 0.3s, visibility 0.3s;
+      z-index: 2;
+      padding: 0;
+      box-sizing: border-box;
+      width: 33.3%;
+      height: 33.3%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .show {
+      opacity: 1;
+      visibility: visible;
+    }
+    button.active {
+      background-color: darkgray;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <label for="search">Search</label>
+    <input type="search" name="search" id="search">
+    <button id="nameSearch">name</button>
+    <button id="flossSearch" class="active">floss</button>
+    <button id="saveThreads">Save Threads</button>
+    <label for="parseThreads">Input Threads File</label>
+    <input id='parseThreads' type='file' accept='application/json'>
+    <!--<button id="openFormButton">Open Form</button>-->
+  </div>
+  <ul id="list">
+    <li>
+
+    </li>
+  </ul>
+  <!--<div id="overlay"></div>
+
+  <div id="popupForm" class="popup-form">
+    <h2>Popup Form</h2>
+    <form>
+      <label for="name">Name:</label>
+      <input type="text" id="name" required>
+      <br>
+      <label for="email">Email:</label>
+      <input type="email" id="email" required>
+      <br>
+      <button type="submit">Submit</button>
+    </form>
+  </div>-->
+  <script type="text/javascript">
+    //const openFormButton = document.getElementById('openFormButton');
+    //const overlay = document.getElementById('overlay');
+    //const popupForm = document.getElementById('popupForm');
+//
+    //openFormButton.addEventListener('click', function() {
+    //  overlay.style.display = 'block';
+    //  popupForm.classList.add('show');
+    //});
+//
+    //overlay.addEventListener('click', function(event) {
+    //  if (event.target === overlay) {
+    //    overlay.style.display = 'none';
+    //    popupForm.classList.remove('show');
+    //  }
+    //});
+
+    /**
+       * @type {Map<string, {floss: string, name: string, color: string, amount: number}>}
+      */
+    let threadsMap = new Map();
+    const list = document.getElementById("list");
+    const nameSearch = document.getElementById("nameSearch");
+    const flossSearch = document.getElementById("flossSearch");
+    let searchTerm = "floss"
+    
+    // parse threads when user uploads threads file
+    document.getElementById("parseThreads").addEventListener("change", async event => {
+        let target = event.target;
+        const [file] = target.files;
+        const text = await file.text();
+        let json = JSON.parse(text);
+        let keys = Object.keys(json);
+        for (let i = 0; i < keys.length; i++) {
+          threadsMap.set(json[keys[i]].floss, json[keys[i]])
+        }
+        displayList()
+      });
+
+    document.getElementById("saveThreads").addEventListener("click", () => {
+        saveToFile(JSON.stringify(Object.fromEntries(threadsMap)), "threadTrackerData")
+      });
+
+    window.addEventListener("beforeunload", (e) => {
+        saveToLocalStorage(JSON.stringify(Object.fromEntries(threadsMap)))
+    });
+
+    nameSearch.addEventListener("click", e => {
+      if (!nameSearch.classList.contains("active")) {
+        nameSearch.classList.add("active")
+        flossSearch.classList.remove("active")
+      }
+      searchTerm = "name"
+    });
+
+    flossSearch.addEventListener("click", e => {
+      if (!flossSearch.classList.contains("active")) {
+        flossSearch.classList.add("active")
+        nameSearch.classList.remove("active")
+      }
+      searchTerm = "floss"
+    });
+
+
+    function getCurrentDate() {
+      var now = new Date();
+
+      // Get day, month, year, hours, and minutes
+      var day = String(now.getDate()).padStart(2, '0');
+      var month = String(now.getMonth() + 1).padStart(2, '0');
+      var year = now.getFullYear();
+      var hours = String(now.getHours()).padStart(2, '0');
+      var minutes = String(now.getMinutes()).padStart(2, '0');
+
+      // Format the date string
+      var formattedDate = day + '-' + month + '-' + year + '-' + hours + '-' + minutes;
+
+      return formattedDate;
+    }
+
+    /**
+     * @function
+     * @param {string} data
+     * @param {string} fileName
+     * @param {string} contentType
+    */
+    function saveToFile(data, fileName, contentType = "text/plain") {
+      var a = document.createElement("a");
+      var file = new Blob([data], {type: contentType});
+      a.href = URL.createObjectURL(file);
+      let time = new Date()
+      a.download = fileName + getCurrentDate() + ".json";
+      a.click();
+      URL.revokeObjectURL(file);
+    }
+
+    /**
+     * @function
+     * @param {string} data
+    */
+    function saveToLocalStorage(data) {
+      window.localStorage.setItem("ThreadTracker", data)
+    }
+
+    /**
+     * @function
+     * @return {string}
+    */
+    function getLocalStorageThreads() {
+      if (window.localStorage.getItem("ThreadTracker") === null) {
+        saveToLocalStorage(JSON.stringify(threadsList)); // makes sure that there is no null value
+      }
+      return window.localStorage.getItem("ThreadTracker")
+    }
+    
+    /**
+     * @function
+    */
+    function displayList() {
+      // Create a new unordered list element
+      list.innerHTML = "";
+
+      // Create a header row for the list
+      const headerRow = document.createElement('li');
+      const headerCells = ['floss', 'name', '', 'amount', 'color'];
+      headerCells.forEach((cellText) => {
+        const headerCell = document.createElement('span');
+        headerCell.textContent = cellText;
+        headerCell.className = "li-header " + cellText 
+        headerRow.appendChild(headerCell);
+      });
+      list.appendChild(headerRow);
+    
+      // Create a list item for each object in the data array
+      let items = [];
+      threadsMap.forEach((item, index) => {
+        const listItem = document.createElement('li');
+        listItem.className = "row";
+      
+        // Floss
+        const flossSpan = document.createElement('span');
+        flossSpan.className = "floss"
+        flossSpan.textContent = item.floss;
+        listItem.appendChild(flossSpan);
+      
+        // Name
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = item.name;
+        nameSpan.className = "name"
+        listItem.appendChild(nameSpan);
+      
+        // Empty column with increment and decrement buttons
+        const buttonSpan = document.createElement('span');
+        buttonSpan.className = "button"
+        const incrementButton = document.createElement('button');
+        incrementButton.textContent = '+';
+        incrementButton.addEventListener('click', () => {
+          item.amount++;
+          amountSpan.textContent = item.amount;
+        });
+        buttonSpan.appendChild(incrementButton);
+        const decrementButton = document.createElement('button');
+        decrementButton.textContent = '-';
+        decrementButton.addEventListener('click', () => {
+          if (item.amount > 0) {
+            item.amount--;
+            amountSpan.textContent = item.amount;
+          }
+        });
+        buttonSpan.appendChild(decrementButton);
+        listItem.appendChild(buttonSpan);
+      
+        // Amount
+        const amountSpan = document.createElement('span');
+        amountSpan.className = "amount"
+        amountSpan.textContent = item.amount;
+        listItem.appendChild(amountSpan);
+      
+        // Color
+        const colorSpan = document.createElement('span');
+        colorSpan.className = "color"
+        //colorSpan.textContent = item.color;
+        colorSpan.style.backgroundColor = `#${item.color}`;
+        listItem.appendChild(colorSpan);
+      
+        items.push({ listItem, data: item });
+      });
+    
+      let sortColumnIndex = -1;
+      let sortDirection = 1;
+    
+      function sortList(columnIndex) {
+        if (columnIndex === sortColumnIndex) {
+          sortDirection *= -1;
+        } else {
+          sortColumnIndex = columnIndex;
+          sortDirection = 1;
+        }
+      
+        items.sort((a, b) => {
+          const aValue = a.data[headerCells[columnIndex]];
+          const bValue = b.data[headerCells[columnIndex]];
+          let result = 0;
+          if (aValue < bValue) {
+            result = -1;
+          } else if (aValue > bValue) {
+            result = 1;
+          }
+          return result * sortDirection;
+        });
+      
+        items.forEach(({ listItem }) => {
+          list.appendChild(listItem);
+        });
+      }
+    
+      // Add click event listeners to each header cell to allow sorting
+      headerCells.forEach((cellText, index) => {
+        const headerCell = headerRow.children[index];
+        headerCell.addEventListener('click', () => {
+          sortList(index);
+        });
+      });
+
+      function searchList(searchValue, searchTerm) {
+        console.log(searchTerm)
+        items.forEach(({ listItem, data }) => {
+          if (!data[searchTerm].toLowerCase().includes(searchValue.toLowerCase())) {
+            listItem.style.display = 'none';
+          } else {
+            listItem.style.display = "flex";
+          }
+        })
+      }
+      document.getElementById("search").addEventListener("input", (e) => {
+        console.log(e.target.value);
+        searchList(e.target.value, searchTerm)
+      })
+      
+      items.forEach(({listItem}) => {
+        list.appendChild(listItem)
+      })
+      
+      return list;
+    }
+    /**
+     * @type {{floss: string, name: string, color: string, amount: number}[]} Thread
+    */
+    let local_threads = JSON.parse(getLocalStorageThreads());
+    Object.values(local_threads).map(obj => threadsMap.set(obj.floss, obj))
+    displayList()
+    const threadsList = [{"floss":"3713","name":"Salmon Very Light","color":"ffe2e2","amount":0},{"floss":"761","name":"Salmon Light","color":"ffc9c9","amount":0},{"floss":"760","name":"Salmon","color":"f5adad","amount":0},{"floss":"3712","name":"Salmon Medium","color":"f18787","amount":0},{"floss":"3328","name":"Salmon Dark","color":"e36d6d","amount":0},{"floss":"347","name":"Salmon Very Dark","color":"bf2d2d","amount":0},{"floss":"353","name":"Peach","color":"fed7cc","amount":0},{"floss":"352","name":"Coral Light","color":"fd9c97","amount":0},{"floss":"351","name":"Coral","color":"e96a67","amount":0},{"floss":"350","name":"Coral Medium","color":"e04848","amount":0},{"floss":"349","name":"Coral Dark","color":"d21035","amount":0},{"floss":"817","name":"Coral Red Very Dark","color":"bb051f","amount":0},{"floss":"3708","name":"Melon Light","color":"ffcbd5","amount":0},{"floss":"3706","name":"Melon Medium","color":"ffadbc","amount":0},{"floss":"3705","name":"Melon Dark","color":"ff7992","amount":0},{"floss":"3801","name":"Melon Very Dark","color":"e74967","amount":0},{"floss":"666","name":"Bright Red","color":"e31d42","amount":0},{"floss":"321","name":"Red","color":"c72b3b","amount":0},{"floss":"304","name":"Red Medium","color":"b71f33","amount":0},{"floss":"498","name":"Red Dark","color":"a7132b","amount":0},{"floss":"816","name":"Garnet","color":"970b23","amount":0},{"floss":"815","name":"Garnet Medium","color":"87071f","amount":0},{"floss":"814","name":"Garnet Dark","color":"7b001b","amount":0},{"floss":"894","name":"Carnation Very Light","color":"ffb2bb","amount":0},{"floss":"893","name":"Carnation Light","color":"fc90a2","amount":0},{"floss":"892","name":"Carnation Medium","color":"ff798c","amount":0},{"floss":"891","name":"Carnation Dark","color":"ff5773","amount":0},{"floss":"818","name":"Baby Pink","color":"ffdfd9","amount":0},{"floss":"957","name":"Geranium Pale","color":"fdb5b5","amount":0},{"floss":"956","name":"Geranium","color":"ff9191","amount":0},{"floss":"309","name":"Rose Dark","color":"d62b5b","amount":0},{"floss":"963","name":"Dusty Rose Ult Vy Lt","color":"ffd7d7","amount":0},{"floss":"3716","name":"Dusty Rose Med Vy Lt","color":"ffbdbd","amount":0},{"floss":"962","name":"Dusty Rose Medium","color":"e68a8a","amount":0},{"floss":"961","name":"Dusty Rose Dark","color":"cf7373","amount":0},{"floss":"3833","name":"Raspberry Light","color":"ea8699","amount":0},{"floss":"3832","name":"Raspberry Medium","color":"db556e","amount":0},{"floss":"3831","name":"Raspberry Dark","color":"b32f48","amount":0},{"floss":"777","name":"Raspberry Very Dark","color":"913546","amount":0},{"floss":"819","name":"Baby Pink Light","color":"ffeeeb","amount":0},{"floss":"3326","name":"Rose Light","color":"fbadb4","amount":0},{"floss":"776","name":"Pink Medium","color":"fcb0b9","amount":0},{"floss":"899","name":"Rose Medium","color":"f27688","amount":0},{"floss":"335","name":"Rose","color":"ee546e","amount":0},{"floss":"326","name":"Rose Very Dark","color":"b33b4b","amount":0},{"floss":"151","name":"Dusty Rose Vry Lt","color":"f0ced4","amount":0},{"floss":"3354","name":"Dusty Rose Light","color":"e4a6ac","amount":0},{"floss":"3733","name":"Dusty Rose","color":"e8879b","amount":0},{"floss":"3731","name":"Dusty Rose Very Dark","color":"da6783","amount":0},{"floss":"3350","name":"Dusty Rose Ultra Dark","color":"bc4365","amount":0},{"floss":"150","name":"Dusty Rose Ult Vy Dk","color":"ab0249","amount":0},{"floss":"3689","name":"Mauve Light","color":"fbbfc2","amount":0},{"floss":"3688","name":"Mauve Medium","color":"e7a9ac","amount":0},{"floss":"3687","name":"Mauve","color":"c96b70","amount":0},{"floss":"3803","name":"Mauve Dark","color":"ab3357","amount":0},{"floss":"3685","name":"Mauve Very Dark","color":"881531","amount":0},{"floss":"605","name":"Cranberry Very Light","color":"ffc0cd","amount":0},{"floss":"604","name":"Cranberry Light","color":"ffb0be","amount":0},{"floss":"603","name":"Cranberry","color":"ffa4be","amount":0},{"floss":"602","name":"Cranberry Medium","color":"e24874","amount":0},{"floss":"601","name":"Cranberry Dark","color":"d1286a","amount":0},{"floss":"600","name":"Cranberry Very Dark","color":"cd2f63","amount":0},{"floss":"3806","name":"Cyclamen Pink Light","color":"ff8cae","amount":0},{"floss":"3805","name":"Cyclamen Pink","color":"f3478b","amount":0},{"floss":"3804","name":"Cyclamen Pink Dark","color":"e02876","amount":0},{"floss":"3609","name":"Plum Ultra Light","color":"f4aed5","amount":0},{"floss":"3608","name":"Plum Very Light","color":"ea9cc4","amount":0},{"floss":"3607","name":"Plum Light","color":"c54989","amount":0},{"floss":"718","name":"Plum","color":"9c2462","amount":0},{"floss":"917","name":"Plum Medium","color":"9b1359","amount":0},{"floss":"915","name":"Plum Dark","color":"820043","amount":0},{"floss":"225","name":"Shell Pink Ult Vy Lt","color":"ffdfd5","amount":0},{"floss":"224","name":"Shell Pink Very Light","color":"ebb7af","amount":0},{"floss":"152","name":"Shell Pink Med Light","color":"e2a099","amount":0},{"floss":"223","name":"Shell Pink Light","color":"cc847c","amount":0},{"floss":"3722","name":"Shell Pink Med","color":"bc6c64","amount":0},{"floss":"3721","name":"Shell Pink Dark","color":"a14b51","amount":0},{"floss":"221","name":"Shell Pink Vy Dk","color":"883e43","amount":0},{"floss":"778","name":"Antique Mauve Vy Lt","color":"dfb3bb","amount":0},{"floss":"3727","name":"Antique Mauve Light","color":"dba9b2","amount":0},{"floss":"316","name":"Antique Mauve Med","color":"b7737f","amount":0},{"floss":"3726","name":"Antique Mauve Dark","color":"9b5b66","amount":0},{"floss":"315","name":"Antique Mauve Md Dk","color":"814952","amount":0},{"floss":"3802","name":"Antique Mauve Vy Dk","color":"714149","amount":0},{"floss":"902","name":"Garnet Very Dark","color":"822637","amount":0},{"floss":"3743","name":"Antique Violet Vy Lt","color":"d7cbd3","amount":0},{"floss":"3042","name":"Antique Violet Light","color":"b79da7","amount":0},{"floss":"3041","name":"Antique Violet Medium","color":"956f7c","amount":0},{"floss":"3740","name":"Antique Violet Dark","color":"785762","amount":0},{"floss":"3836","name":"Grape Light","color":"ba91aa","amount":0},{"floss":"3835","name":"Grape Medium","color":"946083","amount":0},{"floss":"3834","name":"Grape Dark","color":"72375d","amount":0},{"floss":"154","name":"Grape Very Dark","color":"572433","amount":0},{"floss":"211","name":"Lavender Light","color":"e3cbe3","amount":0},{"floss":"210","name":"Lavender Medium","color":"c39fc3","amount":0},{"floss":"209","name":"Lavender Dark","color":"a37ba7","amount":0},{"floss":"208","name":"Lavender Very Dark","color":"835b8b","amount":0},{"floss":"3837","name":"Lavender Ultra Dark","color":"6c3a6e","amount":0},{"floss":"327","name":"Violet Dark","color":"633666","amount":0},{"floss":"153","name":"Violet Very Light","color":"e6ccd9","amount":0},{"floss":"554","name":"Violet Light","color":"dbb3cb","amount":0},{"floss":"553","name":"Violet","color":"a3638b","amount":0},{"floss":"552","name":"Violet Medium","color":"803a6b","amount":0},{"floss":"550","name":"Violet Very Dark","color":"5c184e","amount":0},{"floss":"3747","name":"Blue Violet Vy Lt","color":"d3d7ed","amount":0},{"floss":"341","name":"Blue Violet Light","color":"b7bfdd","amount":0},{"floss":"156","name":"Blue Violet Med Lt","color":"a3aed1","amount":0},{"floss":"340","name":"Blue Violet Medium","color":"ada7c7","amount":0},{"floss":"155","name":"Blue Violet Med Dark","color":"9891b6","amount":0},{"floss":"3746","name":"Blue Violet Dark","color":"776b98","amount":0},{"floss":"333","name":"Blue Violet Very Dark","color":"5c5478","amount":0},{"floss":"157","name":"Cornflower Blue Vy Lt","color":"bbc3d9","amount":0},{"floss":"794","name":"Cornflower Blue Light","color":"8f9cc1","amount":0},{"floss":"793","name":"Cornflower Blue Med","color":"707da2","amount":0},{"floss":"3807","name":"Cornflower Blue","color":"60678c","amount":0},{"floss":"792","name":"Cornflower Blue Dark","color":"555b7b","amount":0},{"floss":"158","name":"Cornflower Blu M V D","color":"4c526e","amount":0},{"floss":"791","name":"Cornflower Blue V D","color":"464563","amount":0},{"floss":"3840","name":"Lavender Blue Light","color":"b0c0da","amount":0},{"floss":"3839","name":"Lavender Blue Med","color":"7b8eab","amount":0},{"floss":"3838","name":"Lavender Blue Dark","color":"5c7294","amount":0},{"floss":"800","name":"Delft Blue Pale","color":"c0ccde","amount":0},{"floss":"809","name":"Delft Blue","color":"94a8c6","amount":0},{"floss":"799","name":"Delft Blue Medium","color":"748eb6","amount":0},{"floss":"798","name":"Delft Blue Dark","color":"466a8e","amount":0},{"floss":"797","name":"Royal Blue","color":"13477d","amount":0},{"floss":"796","name":"Royal Blue Dark","color":"11416d","amount":0},{"floss":"820","name":"Royal Blue Very Dark","color":"0e365c","amount":0},{"floss":"162","name":"Blue Ultra Very Light","color":"dbecf5","amount":0},{"floss":"827","name":"Blue Very Light","color":"bddded","amount":0},{"floss":"813","name":"Blue Light","color":"a1c2d7","amount":0},{"floss":"826","name":"Blue Medium","color":"6b9ebf","amount":0},{"floss":"825","name":"Blue Dark","color":"4781a5","amount":0},{"floss":"824","name":"Blue Very Dark","color":"396987","amount":0},{"floss":"996","name":"Electric Blue Medium","color":"30c2ec","amount":0},{"floss":"3843","name":"Electric Blue","color":"14aad0","amount":0},{"floss":"995","name":"Electric Blue Dark","color":"2696b6","amount":0},{"floss":"3846","name":"Turquoise Bright Light","color":"06e3e6","amount":0},{"floss":"3845","name":"Turquoise Bright Med","color":"04c4ca","amount":0},{"floss":"3844","name":"Turquoise Bright Dark","color":"12aeba","amount":0},{"floss":"159","name":"Blue Gray Light","color":"c7cad7","amount":0},{"floss":"160","name":"Blue Gray Medium","color":"999fb7","amount":0},{"floss":"161","name":"Blue Gray","color":"7880a4","amount":0},{"floss":"3756","name":"Baby Blue Ult Vy Lt","color":"eefcfc","amount":0},{"floss":"775","name":"Baby Blue Very Light","color":"d9ebf1","amount":0},{"floss":"3841","name":"Baby Blue Pale","color":"cddfed","amount":0},{"floss":"3325","name":"Baby Blue Light","color":"b8d2e6","amount":0},{"floss":"3755","name":"Baby Blue","color":"93b4ce","amount":0},{"floss":"334","name":"Baby Blue Medium","color":"739fc1","amount":0},{"floss":"322","name":"Baby Blue Dark","color":"5a8fb8","amount":0},{"floss":"312","name":"Baby Blue Very Dark","color":"35668b","amount":0},{"floss":"803","name":"Baby Blue Ult Vy Dk","color":"2c597c","amount":0},{"floss":"336","name":"Navy Blue","color":"253b73","amount":0},{"floss":"823","name":"Navy Blue Dark","color":"213063","amount":0},{"floss":"939","name":"Navy Blue Very Dark","color":"1b2853","amount":0},{"floss":"3753","name":"Antique Blue Ult Vy Lt","color":"dbe2e9","amount":0},{"floss":"3752","name":"Antique Blue Very Lt","color":"c7d1db","amount":0},{"floss":"932","name":"Antique Blue Light","color":"a2b5c6","amount":0},{"floss":"931","name":"Antique Blue Medium","color":"6a859e","amount":0},{"floss":"930","name":"Antique Blue Dark","color":"455c71","amount":0},{"floss":"3750","name":"Antique Blue Very Dk","color":"384c5e","amount":0},{"floss":"828","name":"Sky Blue Vy Lt","color":"c5e8ed","amount":0},{"floss":"3761","name":"Sky Blue Light","color":"acd8e2","amount":0},{"floss":"519","name":"Sky Blue","color":"7eb1c8","amount":0},{"floss":"518","name":"Wedgewood Light","color":"4f93a7","amount":0},{"floss":"3760","name":"Wedgewood Med","color":"3e85a2","amount":0},{"floss":"517","name":"Wedgewood Dark","color":"3b768f","amount":0},{"floss":"3842","name":"Wedgewood Vry Dk","color":"32667c","amount":0},{"floss":"311","name":"Wedgewood Ult VyDk","color":"1c5066","amount":0},{"floss":"747","name":"Peacock Blue Vy Lt","color":"e5fcfd","amount":0},{"floss":"3766","name":"Peacock Blue Light","color":"99cfd9","amount":0},{"floss":"807","name":"Peacock Blue","color":"64abba","amount":0},{"floss":"806","name":"Peacock Blue Dark","color":"3d95a5","amount":0},{"floss":"3765","name":"Peacock Blue Vy Dk","color":"347f8c","amount":0},{"floss":"3811","name":"Turquoise Very Light","color":"bce3e6","amount":0},{"floss":"598","name":"Turquoise Light","color":"90c3cc","amount":0},{"floss":"597","name":"Turquoise","color":"5ba3b3","amount":0},{"floss":"3810","name":"Turquoise Dark","color":"488e9a","amount":0},{"floss":"3809","name":"Turquoise Vy Dark","color":"3f7c85","amount":0},{"floss":"3808","name":"Turquoise Ult Vy Dk","color":"366970","amount":0},{"floss":"928","name":"Gray Green Vy Lt","color":"dde3e3","amount":0},{"floss":"927","name":"Gray Green Light","color":"bdcbcb","amount":0},{"floss":"926","name":"Gray Green Med","color":"98aeae","amount":0},{"floss":"3768","name":"Gray Green Dark","color":"657f7f","amount":0},{"floss":"924","name":"Gray Green Vy Dark","color":"566a6a","amount":0},{"floss":"3849","name":"Teal Green Light","color":"52b3a4","amount":0},{"floss":"3848","name":"Teal Green Med","color":"559392","amount":0},{"floss":"3847","name":"Teal Green Dark","color":"347d75","amount":0},{"floss":"964","name":"Sea Green Light","color":"a9e2d8","amount":0},{"floss":"959","name":"Sea Green Med","color":"59c7b4","amount":0},{"floss":"958","name":"Sea Green Dark","color":"3eb6a1","amount":0},{"floss":"3812","name":"Sea Green Vy Dk","color":"2f8c84","amount":0},{"floss":"3851","name":"Green Bright Lt","color":"49b3a1","amount":0},{"floss":"943","name":"Green Bright Md","color":"3d9384","amount":0},{"floss":"3850","name":"Green Bright Dk","color":"378477","amount":0},{"floss":"993","name":"Aquamarine Vy Lt","color":"90c0b4","amount":0},{"floss":"992","name":"Aquamarine Lt","color":"6fae9f","amount":0},{"floss":"3814","name":"Aquamarine","color":"508b7d","amount":0},{"floss":"991","name":"Aquamarine Dk","color":"477b6e","amount":0},{"floss":"966","name":"Jade Ultra Vy Lt","color":"b9d7c0","amount":0},{"floss":"564","name":"Jade Very Light","color":"a7cdaf","amount":0},{"floss":"563","name":"Jade Light","color":"8fc098","amount":0},{"floss":"562","name":"Jade Medium","color":"53976a","amount":0},{"floss":"505","name":"Jade Green","color":"338362","amount":0},{"floss":"3817","name":"Celadon Green Lt","color":"99c3aa","amount":0},{"floss":"3816","name":"Celadon Green","color":"65a57d","amount":0},{"floss":"163","name":"Celadon Green Md","color":"4d8361","amount":0},{"floss":"3815","name":"Celadon Green Dk","color":"477759","amount":0},{"floss":"561","name":"Celadon Green VD","color":"2c6a45","amount":0},{"floss":"504","name":"Blue Green Vy Lt","color":"c4decc","amount":0},{"floss":"3813","name":"Blue Green Lt","color":"b2d4bd","amount":0},{"floss":"503","name":"Blue Green Med","color":"7bac94","amount":0},{"floss":"502","name":"Blue Green","color":"5b9071","amount":0},{"floss":"501","name":"Blue Green Dark","color":"396f52","amount":0},{"floss":"500","name":"Blue Green Vy Dk","color":"044d33","amount":0},{"floss":"955","name":"Nile Green Light","color":"a2d6ad","amount":0},{"floss":"954","name":"Nile Green","color":"88ba91","amount":0},{"floss":"913","name":"Nile Green Med","color":"6dab77","amount":0},{"floss":"912","name":"Emerald Green Lt","color":"1b9d6b","amount":0},{"floss":"911","name":"Emerald Green Med","color":"189065","amount":0},{"floss":"910","name":"Emerald Green Dark","color":"187e56","amount":0},{"floss":"909","name":"Emerald Green Vy Dk","color":"156f49","amount":0},{"floss":"3818","name":"Emerald Grn Ult V Dk","color":"115a3b","amount":0},{"floss":"369","name":"Pistachio Green Vy Lt","color":"d7edcc","amount":0},{"floss":"368","name":"Pistachio Green Lt","color":"a6c298","amount":0},{"floss":"320","name":"Pistachio Green Med","color":"69885a","amount":0},{"floss":"367","name":"Pistachio Green Dk","color":"617a52","amount":0},{"floss":"319","name":"Pistachio Grn Vy Dk","color":"205f2e","amount":0},{"floss":"890","name":"Pistachio Grn Ult V D","color":"174923","amount":0},{"floss":"164","name":"Forest Green Lt","color":"c8d8b8","amount":0},{"floss":"989","name":"Forest Green","color":"8da675","amount":0},{"floss":"988","name":"Forest Green Med","color":"738b5b","amount":0},{"floss":"987","name":"Forest Green Dk","color":"587141","amount":0},{"floss":"986","name":"Forest Green Vy Dk","color":"405230","amount":0},{"floss":"772","name":"Yellow Green Vy Lt","color":"e4ecd4","amount":0},{"floss":"3348","name":"Yellow Green Lt","color":"ccd9b1","amount":0},{"floss":"3347","name":"Yellow Green Med","color":"71935c","amount":0},{"floss":"3346","name":"Hunter Green","color":"406a3a","amount":0},{"floss":"3345","name":"Hunter Green Dk","color":"1b5915","amount":0},{"floss":"895","name":"Hunter Green Vy Dk","color":"1b5300","amount":0},{"floss":"704","name":"Chartreuse Bright","color":"9ecf34","amount":0},{"floss":"703","name":"Chartreuse","color":"7bb547","amount":0},{"floss":"702","name":"Kelly Green","color":"47a72f","amount":0},{"floss":"701","name":"Green Light","color":"3f8f29","amount":0},{"floss":"700","name":"Green Bright","color":"07731b","amount":0},{"floss":"699","name":"Green","color":"056517","amount":0},{"floss":"907","name":"Parrot Green Lt","color":"c7e666","amount":0},{"floss":"906","name":"Parrot Green Md","color":"7fb335","amount":0},{"floss":"905","name":"Parrot Green Dk","color":"628a28","amount":0},{"floss":"904","name":"Parrot Green V Dk","color":"557822","amount":0},{"floss":"472","name":"Avocado Grn U Lt","color":"d8e498","amount":0},{"floss":"471","name":"Avocado Grn V Lt","color":"aebf79","amount":0},{"floss":"470","name":"Avocado Grn Lt","color":"94ab4f","amount":0},{"floss":"469","name":"Avocado Green","color":"72843c","amount":0},{"floss":"937","name":"Avocado Green Md","color":"627133","amount":0},{"floss":"936","name":"Avocado Grn V Dk","color":"4c5826","amount":0},{"floss":"935","name":"Avocado Green Dk","color":"424d21","amount":0},{"floss":"934","name":"Avocado Grn Black","color":"313919","amount":0},{"floss":"523","name":"Fern Green Lt","color":"abb197","amount":0},{"floss":"3053","name":"Green Gray","color":"9ca482","amount":0},{"floss":"3052","name":"Green Gray Md","color":"889268","amount":0},{"floss":"3051","name":"Green Gray Dk","color":"5f6648","amount":0},{"floss":"524","name":"Fern Green Vy Lt","color":"c4cdac","amount":0},{"floss":"522","name":"Fern Green","color":"969e7e","amount":0},{"floss":"520","name":"Fern Green Dark","color":"666d4f","amount":0},{"floss":"3364","name":"Pine Green","color":"83975f","amount":0},{"floss":"3363","name":"Pine Green Md","color":"728256","amount":0},{"floss":"3362","name":"Pine Green Dk","color":"5e6b47","amount":0},{"floss":"165","name":"Moss Green Vy Lt","color":"eff4a4","amount":0},{"floss":"3819","name":"Moss Green Lt","color":"e0e868","amount":0},{"floss":"166","name":"Moss Green Md Lt","color":"c0c840","amount":0},{"floss":"581","name":"Moss Green","color":"a7ae38","amount":0},{"floss":"580","name":"Moss Green Dk","color":"888d33","amount":0},{"floss":"734","name":"Olive Green Lt","color":"c7c077","amount":0},{"floss":"733","name":"Olive Green Md","color":"bcb34c","amount":0},{"floss":"732","name":"Olive Green","color":"948c36","amount":0},{"floss":"731","name":"Olive Green Dk","color":"938b37","amount":0},{"floss":"730","name":"Olive Green V Dk","color":"827b30","amount":0},{"floss":"3013","name":"Khaki Green Lt","color":"b9b982","amount":0},{"floss":"3012","name":"Khaki Green Md","color":"a6a75d","amount":0},{"floss":"3011","name":"Khaki Green Dk","color":"898a58","amount":0},{"floss":"372","name":"Mustard Lt","color":"ccb784","amount":0},{"floss":"371","name":"Mustard","color":"bfa671","amount":0},{"floss":"370","name":"Mustard Medium","color":"b89d64","amount":0},{"floss":"834","name":"Golden Olive Vy Lt","color":"dbbe7f","amount":0},{"floss":"833","name":"Golden Olive Lt","color":"c8ab6c","amount":0},{"floss":"832","name":"Golden Olive","color":"bd9b51","amount":0},{"floss":"831","name":"Golden Olive Md","color":"aa8f56","amount":0},{"floss":"830","name":"Golden Olive Dk","color":"8d784b","amount":0},{"floss":"829","name":"Golden Olive Vy Dk","color":"7e6b42","amount":0},{"floss":"613","name":"Drab Brown V Lt","color":"dcc4aa","amount":0},{"floss":"612","name":"Drab Brown Lt","color":"bc9a78","amount":0},{"floss":"611","name":"Drab Brown","color":"967656","amount":0},{"floss":"610","name":"Drab Brown Dk","color":"796047","amount":0},{"floss":"3047","name":"Yellow Beige Lt","color":"e7d6c1","amount":0},{"floss":"3046","name":"Yellow Beige Md","color":"d8bc9a","amount":0},{"floss":"3045","name":"Yellow Beige Dk","color":"bc966a","amount":0},{"floss":"167","name":"Yellow Beige V Dk","color":"a77c49","amount":0},{"floss":"746","name":"Off White","color":"fcfcee","amount":0},{"floss":"677","name":"Old Gold Vy Lt","color":"f5eccb","amount":0},{"floss":"422","name":"Hazelnut Brown Lt","color":"c69f7b","amount":0},{"floss":"3828","name":"Hazelnut Brown","color":"b78b61","amount":0},{"floss":"420","name":"Hazelnut Brown Dk","color":"a07042","amount":0},{"floss":"869","name":"Hazelnut Brown V Dk","color":"835e39","amount":0},{"floss":"728","name":"Topaz","color":"e4b468","amount":0},{"floss":"783","name":"Topaz Medium","color":"ce9124","amount":0},{"floss":"782","name":"Topaz Dark","color":"ae7720","amount":0},{"floss":"781","name":"Topaz Very Dark","color":"a26d20","amount":0},{"floss":"780","name":"Topaz Ultra Vy Dk","color":"94631a","amount":0},{"floss":"676","name":"Old Gold Lt","color":"e5ce97","amount":0},{"floss":"729","name":"Old Gold Medium","color":"d0a53e","amount":0},{"floss":"680","name":"Old Gold Dark","color":"bc8d0e","amount":0},{"floss":"3829","name":"Old Gold Vy Dark","color":"a98204","amount":0},{"floss":"3822","name":"Straw Light","color":"f6dc98","amount":0},{"floss":"3821","name":"Straw","color":"f3ce75","amount":0},{"floss":"3820","name":"Straw Dark","color":"dfb65f","amount":0},{"floss":"3852","name":"Straw Very Dark","color":"cd9d37","amount":0},{"floss":"445","name":"Lemon Light","color":"fffb8b","amount":0},{"floss":"307","name":"Lemon","color":"fded54","amount":0},{"floss":"973","name":"Canary Bright","color":"ffe300","amount":0},{"floss":"444","name":"Lemon Dark","color":"ffd600","amount":0},{"floss":"3078","name":"Golden Yellow Vy Lt","color":"fdf9cd","amount":0},{"floss":"727","name":"Topaz Vy Lt","color":"fff1af","amount":0},{"floss":"726","name":"Topaz Light","color":"fdd755","amount":0},{"floss":"725","name":"Topaz Med Lt","color":"ffc840","amount":0},{"floss":"972","name":"Canary Deep","color":"ffb515","amount":0},{"floss":"745","name":"Yellow Pale Light","color":"ffe9ad","amount":0},{"floss":"744","name":"Yellow Pale","color":"ffe793","amount":0},{"floss":"743","name":"Yellow Med","color":"fed376","amount":0},{"floss":"742","name":"Tangerine Light","color":"ffbf57","amount":0},{"floss":"741","name":"Tangerine Med","color":"ffa32b","amount":0},{"floss":"740","name":"Tangerine","color":"ff8b00","amount":0},{"floss":"970","name":"Pumpkin Light","color":"f78b13","amount":0},{"floss":"971","name":"Pumpkin","color":"f67f00","amount":0},{"floss":"947","name":"Burnt Orange","color":"ff7b4d","amount":0},{"floss":"946","name":"Burnt Orange Med","color":"eb6307","amount":0},{"floss":"900","name":"Burnt Orange Dark","color":"d15807","amount":0},{"floss":"967","name":"Apricot Very Light","color":"ffded5","amount":0},{"floss":"3824","name":"Apricot Light","color":"fecdc2","amount":0},{"floss":"3341","name":"Apricot","color":"fcab98","amount":0},{"floss":"3340","name":"Apricot Med","color":"ff836f","amount":0},{"floss":"608","name":"Burnt Orange Bright","color":"fd5d35","amount":0},{"floss":"606","name":"Orange?Red Bright","color":"fa3203","amount":0},{"floss":"951","name":"Tawny Light","color":"ffe2cf","amount":0},{"floss":"3856","name":"Mahogany Ult Vy Lt","color":"ffd3b5","amount":0},{"floss":"722","name":"Orange Spice Light","color":"f7976f","amount":0},{"floss":"721","name":"Orange Spice Med","color":"f27842","amount":0},{"floss":"720","name":"Orange Spice Dark","color":"e55c1f","amount":0},{"floss":"3825","name":"Pumpkin Pale","color":"fdbd96","amount":0},{"floss":"922","name":"Copper Light","color":"e27323","amount":0},{"floss":"921","name":"Copper","color":"c66218","amount":0},{"floss":"920","name":"Copper Med","color":"ac5414","amount":0},{"floss":"919","name":"Red Copper","color":"a64510","amount":0},{"floss":"918","name":"Red Copper Dark","color":"82340a","amount":0},{"floss":"3770","name":"Tawny Vy Light","color":"ffeee3","amount":0},{"floss":"945","name":"Tawny","color":"fbd5bb","amount":0},{"floss":"402","name":"Mahogany Vy Lt","color":"f7a777","amount":0},{"floss":"3776","name":"Mahogany Light","color":"cf7939","amount":0},{"floss":"301","name":"Mahogany Med","color":"b35f2b","amount":0},{"floss":"400","name":"Mahogany Dark","color":"8f430f","amount":0},{"floss":"300","name":"Mahogany Vy Dk","color":"6f2f00","amount":0},{"floss":"3823","name":"Yellow Ultra Pale","color":"fffde3","amount":0},{"floss":"3855","name":"Autumn Gold Lt","color":"fad396","amount":0},{"floss":"3854","name":"Autumn Gold Med","color":"f2af68","amount":0},{"floss":"3853","name":"Autumn Gold Dk","color":"f29746","amount":0},{"floss":"3827","name":"Golden Brown Pale","color":"f7bb77","amount":0},{"floss":"977","name":"Golden Brown Light","color":"dc9c56","amount":0},{"floss":"976","name":"Golden Brown Med","color":"c28142","amount":0},{"floss":"3826","name":"Golden Brown","color":"ad7239","amount":0},{"floss":"975","name":"Golden Brown Dk","color":"914f12","amount":0},{"floss":"948","name":"Peach Very Light","color":"fee7da","amount":0},{"floss":"754","name":"Peach Light","color":"f7cbbf","amount":0},{"floss":"3771","name":"Terra Cotta Ult Vy Lt","color":"f4bba9","amount":0},{"floss":"758","name":"Terra Cotta Vy Lt","color":"eeaa9b","amount":0},{"floss":"3778","name":"Terra Cotta Light","color":"d98978","amount":0},{"floss":"356","name":"Terra Cotta Med","color":"c56a5b","amount":0},{"floss":"3830","name":"Terra Cotta","color":"b95544","amount":0},{"floss":"355","name":"Terra Cotta Dark","color":"984436","amount":0},{"floss":"3777","name":"Terra Cotta Vy Dk","color":"863022","amount":0},{"floss":"3779","name":"Rosewood Ult Vy Lt","color":"f8cac8","amount":0},{"floss":"3859","name":"Rosewood Light","color":"ba8b7c","amount":0},{"floss":"3858","name":"Rosewood Med","color":"964a3f","amount":0},{"floss":"3857","name":"Rosewood Dark","color":"68251a","amount":0},{"floss":"3774","name":"Desert Sand Vy Lt","color":"f3e1d7","amount":0},{"floss":"950","name":"Desert Sand Light","color":"eed3c4","amount":0},{"floss":"3064","name":"Desert Sand","color":"c48e70","amount":0},{"floss":"407","name":"Desert Sand Med","color":"bb8161","amount":0},{"floss":"3773","name":"Desert Sand Dark","color":"b67552","amount":0},{"floss":"3772","name":"Desert Sand Vy Dk","color":"a06c50","amount":0},{"floss":"632","name":"Desert Sand Ult Vy Dk","color":"875539","amount":0},{"floss":"453","name":"Shell Gray Light","color":"d7cecb","amount":0},{"floss":"452","name":"Shell Gray Med","color":"c0b3ae","amount":0},{"floss":"451","name":"Shell Gray Dark","color":"917b73","amount":0},{"floss":"3861","name":"Cocoa Light","color":"a68881","amount":0},{"floss":"3860","name":"Cocoa","color":"7d5d57","amount":0},{"floss":"779","name":"Cocoa Dark","color":"624b45","amount":0},{"floss":"712","name":"Cream","color":"fffbef","amount":0},{"floss":"739","name":"Tan Ult Vy Lt","color":"f8e4c8","amount":0},{"floss":"738","name":"Tan Very Light","color":"eccc9e","amount":0},{"floss":"437","name":"Tan Light","color":"e4bb8e","amount":0},{"floss":"436","name":"Tan","color":"cb9051","amount":0},{"floss":"435","name":"Brown Very Light","color":"b87748","amount":0},{"floss":"434","name":"Brown Light","color":"985e33","amount":0},{"floss":"433","name":"Brown Med","color":"7a451f","amount":0},{"floss":"801","name":"Coffee Brown Dk","color":"653919","amount":0},{"floss":"898","name":"Coffee Brown Vy Dk","color":"492a13","amount":0},{"floss":"938","name":"Coffee Brown Ult Dk","color":"361f0e","amount":0},{"floss":"3371","name":"Black Brown","color":"1e1108","amount":0},{"floss":"543","name":"Beige Brown Ult Vy Lt","color":"f2e3ce","amount":0},{"floss":"3864","name":"Mocha Beige Light","color":"cbb69c","amount":0},{"floss":"3863","name":"Mocha Beige Med","color":"a4835c","amount":0},{"floss":"3862","name":"Mocha Beige Dark","color":"8a6e4e","amount":0},{"floss":"3031","name":"Mocha Brown Vy Dk","color":"4b3c2a","amount":0},{"floss":"B5200","name":"Snow White","color":"ffffff","amount":0},{"floss":"White","name":"White","color":"fcfbf8","amount":0},{"floss":"3865","name":"Winter White","color":"f9f7f1","amount":0},{"floss":"Ecru","name":"Ecru","color":"f0eada","amount":0},{"floss":"822","name":"Beige Gray Light","color":"e7e2d3","amount":0},{"floss":"644","name":"Beige Gray Med","color":"ddd8cb","amount":0},{"floss":"642","name":"Beige Gray Dark","color":"a49878","amount":0},{"floss":"640","name":"Beige Gray Vy Dk","color":"857b61","amount":0},{"floss":"3787","name":"Brown Gray Dark","color":"625d50","amount":0},{"floss":"3021","name":"Brown Gray Vy Dk","color":"4f4b41","amount":0},{"floss":"3024","name":"Brown Gray Vy Lt","color":"ebeae7","amount":0},{"floss":"3023","name":"Brown Gray Light","color":"b1aa97","amount":0},{"floss":"3022","name":"Brown Gray Med","color":"8e9078","amount":0},{"floss":"535","name":"Ash Gray Vy Lt","color":"636458","amount":0},{"floss":"3033","name":"Mocha Brown Vy Lt","color":"e3d8cc","amount":0},{"floss":"3782","name":"Mocha Brown Lt","color":"d2bca6","amount":0},{"floss":"3032","name":"Mocha Brown Med","color":"b39f8b","amount":0},{"floss":"3790","name":"Beige Gray Ult Dk","color":"7f6a55","amount":0},{"floss":"3781","name":"Mocha Brown Dk","color":"6b5743","amount":0},{"floss":"3866","name":"Mocha Brn Ult Vy Lt","color":"faf6f0","amount":0},{"floss":"842","name":"Beige Brown Vy Lt","color":"d1baa1","amount":0},{"floss":"841","name":"Beige Brown Lt","color":"b69b7e","amount":0},{"floss":"840","name":"Beige Brown Med","color":"9a7c5c","amount":0},{"floss":"839","name":"Beige Brown Dk","color":"675541","amount":0},{"floss":"838","name":"Beige Brown Vy Dk","color":"594937","amount":0},{"floss":"3072","name":"Beaver Gray Vy Lt","color":"e6e8e8","amount":0},{"floss":"648","name":"Beaver Gray Lt","color":"bcb4ac","amount":0},{"floss":"647","name":"Beaver Gray Med","color":"b0a69c","amount":0},{"floss":"646","name":"Beaver Gray Dk","color":"877d73","amount":0},{"floss":"645","name":"Beaver Gray Vy Dk","color":"6e655c","amount":0},{"floss":"844","name":"Beaver Gray Ult Dk","color":"484848","amount":0},{"floss":"762","name":"Pearl Gray Vy Lt","color":"ececec","amount":0},{"floss":"415","name":"Pearl Gray","color":"d3d3d6","amount":0},{"floss":"318","name":"Steel Gray Lt","color":"ababab","amount":0},{"floss":"414","name":"Steel Gray Dk","color":"8c8c8c","amount":0},{"floss":"168","name":"Pewter Very Light","color":"d1d1d1","amount":0},{"floss":"169","name":"Pewter Light","color":"848484","amount":0},{"floss":"317","name":"Pewter Gray","color":"6c6c6c","amount":0},{"floss":"413","name":"Pewter Gray Dark","color":"565656","amount":0},{"floss":"3799","name":"Pewter Gray Vy Dk","color":"424242","amount":0},{"floss":"310","name":"Black","color":"000000","amount":0}]
+  </script>
+</body>
+</html>

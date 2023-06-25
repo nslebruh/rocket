@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Form</title>
+</head>
+<body>
+  <form method="post" action="signup">
+    <label for="signup_username">signup Username</label>
+    <input type="text" name="username" id="signup_username" />
+    <label for="signup_password">signup Password</label>
+    <input type="text" name="password" id="signup_password" />
+    <button type="submit">Submit</button>
+  </form>
+  <br>
+  <form method="post" action="login">
+    <label for="login_username">login Username</label>
+    <input type="text" name="username" id="login_username" />
+    <label for="login_password">login Password</label>
+    <input type="text" name="password" id="login_password" />
+    <button type="submit">Submit</button>
+  </form>
+  <br>
+  <form action="signout" method="post">
+    <input type="submit" name="signout" value="signout" />
+  </form>
+  <br>
+  <a href="getthreads">Get threads</a>
+  <br>
+  <a href="getthreads2">Get threads2</a>
+  <br>
+  <form id="updatethreads">
+    <label for="update_floss">Floss</label>
+    <input type="number" name="floss" id="update_floss">
+    <label for="action_inc">Increment</label>
+    <input type="radio" name="action" id="action_inc" value="Increment">
+    <label for="action_dec">Decrement</label>
+    <input type="radio" name="action" id="action_dec" value="Decrement">
+
+  </form>
+  <script>
+    document.getElementById("updatethreads").onsubmit = async function(e) {
+      e.preventDefault();
+      console.log(e.target["floss"].value)
+      let res = await fetch("updatethread", {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+      method: "POST", 
+      body: JSON.stringify({
+        floss: parseInt(e.target["floss"].value),
+        action: e.target["action"].value
+      })
+    });
+      console.log(await (await res.blob()).text())
+    };
+  </script>
+</body>
+</html>
