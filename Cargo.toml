@@ -11,8 +11,7 @@ rocket = {version = "0.5.0-rc.2", features = ["secrets", "json"]}
 tokio = "1.26.0"
 rocket_db_pools = {version = "0.1.0-rc.2", features = ["sqlx_mysql", "sqlx_macros"]}
 serde = { version = "1.0", features = ["derive"] }
-password-hash = "0.5.0"
 argon2 = "0.5.0"
 hex = "0.4.3"
-sqlx = {version = "0.5", features = ["macros"]}
+sqlx = {version = "0.5", features = ["macros", "runtime-tokio-rustls"]}
 
