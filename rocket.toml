@@ -1,2 +1,6 @@
 [default.databases.mysql_test]
 url = "mysql://root:GDudnTtOEoc250Ece1KF@containers-us-west-124.railway.app:8019/railway"
+min_connections = 64
+max_connections = 1024
+connect_timeout = 5
+idle_timeout = 120
