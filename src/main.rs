@@ -177,7 +177,6 @@ async fn login_redirect() -> Redirect {
 
 #[get("/login")]
 async fn login_page() -> io::Result<NamedFile> {
-    println!("{}", include_str!("login.html"));
     NamedFile::open("login.html").await
 }
 
@@ -341,20 +340,12 @@ async fn test_html() -> RawHtml<String> {
 #[get("/<file..>", rank = 3)]
 async fn build_dir(file: PathBuf) -> io::Result<NamedFile> {
     println!("any file: {file:?}");
-    NamedFile::open(Path::new("../src/").join(file)).await
+    NamedFile::open(file).await
 }
 
 
 #[launch]
 fn rocket() -> _ {
-    use walkdir::WalkDir;
-
-    for e in WalkDir::new(".").into_iter().filter_map(|e| e.ok()) {
-        if e.metadata().unwrap().is_file() {
-            println!("{}", e.path().display());
-        }
-    }
-
     rocket::build()
         .attach(ThreadsDatabase::init())
         .attach(Cors)
