@@ -1,24 +1,11 @@
-mod util;
-
 use std::{fmt::Display, path::{PathBuf, Path}, io};
-use util::hash_password_to_string;
+use argon2::Argon2;
+use hex::encode;
 
 use rocket::{
-    fairing::{
-        Info,
-        Fairing,
-        Kind
-    },
-    http::{
-        Header,
-        CookieJar,
-        Cookie
-    },
-    request::{
-        self,
-        FromRequest,
-        Outcome
-    },
+    fairing::{Info, Fairing, Kind},
+    http::{Header, CookieJar, Cookie},
+    request::{self, FromRequest, Outcome},
     response::{status::BadRequest, content::RawHtml, Redirect},
     form::Form, fs::NamedFile, serde::json::Json
 };
@@ -26,19 +13,24 @@ use rocket_db_pools::{
     sqlx::{
         self,
         FromRow,
-        query_as, mysql::MySqlRow, Row, query
+        query_as,
+        mysql::MySqlRow,
+        Row,
+        query
     }, 
     Database,
     Connection
 };
+
+use rocket::{Request, Response};
+use serde::{Deserialize, Serialize};
 
 #[macro_use]
 extern crate rocket;
 extern crate rocket_db_pools;
 
 
-use rocket::{Request, Response};
-use serde::{Deserialize, Serialize};
+
 
 #[derive(Database)]
 #[database("mysql_test")]
@@ -174,7 +166,7 @@ fn oops(_: &Request) -> &'static str {
 
 #[get("/")]
 async fn index(_user: &ExistingUser) -> io::Result<NamedFile> {
-    NamedFile::open("../build/main_page.html").await
+    NamedFile::open("main_page.html").await
 }
 
 #[get("/", rank = 2)]
@@ -184,8 +176,8 @@ async fn login_redirect() -> Redirect {
 
 #[get("/login")]
 async fn login_page() -> io::Result<NamedFile> {
-    println!("{}", include_str!("../build/login.html"));
-    NamedFile::open("../build/login.html").await
+    println!("{}", include_str!("login.html"));
+    NamedFile::open("login.html").await
 }
 
 #[post("/login", data="<data>")]
@@ -241,29 +233,6 @@ async fn signout(_user: &ExistingUser, cookies: &CookieJar<'_>) -> String {
     cookies.remove_private(Cookie::named("user_id"));
     format!("Successfully signed out")
 }
-
-//#[get("/addcookie/<id>")]
-//async fn addcookie(id: i64, cookies: &CookieJar<'_>) -> String {
-//    cookies.add_private(Cookie::new(id.to_string(), id.to_string()));
-//    format!("added cookie: {}", id.to_string())
-//}
-//
-//#[get("/removecookie/<id>")]
-//async fn removecookie(id: i64, cookies: &CookieJar<'_>) -> String {
-//    cookies.remove_private(Cookie::named(id.to_string()));
-//    format!("removed cookie: {}", id.to_string())
-//}
-//
-//#[get("/validatecookie/<id>")]
-//async fn validatecookie(id: i64, cookies: &CookieJar<'_>) -> String {
-//    let cookie = cookies.get_private(id.to_string().as_str());
-//    match cookie {
-//        Some(value) => {
-//            format!("Cookie {}", value.value())
-//        },
-//        None => format!("No cookie")
-//    }
-//}
 
 #[get("/getthreads")]
 async fn get_threads(mut db: Connection<ThreadsDatabase>, user: &ExistingUser) -> Result<Json<Vec<Thread>>, BadRequest<String>> {
@@ -349,34 +318,30 @@ async fn update_thread(mut db: Connection<ThreadsDatabase>, user: &ExistingUser,
     }
 }
 
-#[post("/updatethreads", data="<data>")]
-fn update_threads(mut db: Connection<ThreadsDatabase>, user: &ExistingUser, data: Json<Vec<UpdateThreadMessage>>) {
-    let sql: String = String::new();
-    for thread in data.iter() {
-        let operator = match thread.action {
-            UpdateThreadOptions::Increment => "+",
-            UpdateThreadOptions::Decrement => "-"
-        };
-        let statement = format!("UPDATE threads SET Amount = Amount {} 1 WHERE UserId = ? AND Floss = ?;", operator);
-    }
-}
+//#[post("/updatethreads", data="<data>")]
+//fn update_threads(mut db: Connection<ThreadsDatabase>, user: &ExistingUser, data: Json<Vec<UpdateThreadMessage>>) {
+//    let sql: String = String::new();
+//    for thread in data.iter() {
+//        let operator = match thread.action {
+//            UpdateThreadOptions::Increment => "+",
+//            UpdateThreadOptions::Decrement => "-"
+//        };
+//        let statement = format!("UPDATE threads SET Amount = Amount {} 1 WHERE UserId = ? AND Floss = ?;", operator);
+//    }
+//}
 
 
 #[get("/testhtml")]
 async fn test_html() -> RawHtml<String> {
+    println!("test html");
     RawHtml(String::from(include_str!("../test.html")))
 }
 
 #[get("/<file..>", rank = 3)]
 async fn build_dir(file: PathBuf) -> io::Result<NamedFile> {
-    println!("{file:?}");
-    NamedFile::open(Path::new("../build/").join(file)).await
+    println!("any file: {file:?}");
+    NamedFile::open(Path::new("").join(file)).await
 }
-#[get("/static/<file..>", rank = 2)]
-async fn static_dir(file: PathBuf) -> io::Result<NamedFile> {
-    NamedFile::open(Path::new("../build/static/").join(file)).await
-}
-
 
 
 #[launch]
@@ -384,6 +349,17 @@ fn rocket() -> _ {
     rocket::build()
         .attach(ThreadsDatabase::init())
         .attach(Cors)
-        .mount("/", routes![all_options, index, login_page, login, signup, signout, get_threads, test_html, build_dir, static_dir, update_thread, login_redirect])
+        .mount("/", routes![all_options, index, login_page, login, signup, signout, get_threads, test_html, build_dir, update_thread, login_redirect])
         .register("/", catchers![not_found, oops])
 }
+
+fn hash_password_to_string(password: &str) -> String {
+    let salt = format!("{password}_salt_lol");
+    let mut output_password = [0u8; 32];
+    Argon2::default().hash_password_into(
+      password.as_bytes(),
+      salt.as_bytes(),
+      &mut output_password
+    ).expect("unable to hash password");
+    encode(output_password)
+  }
