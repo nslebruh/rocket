@@ -27,7 +27,7 @@ use rocket_db_pools::{
     sqlx::{
         self,
         FromRow,
-        query_as, mysql::MySqlRow, Row
+        query_as, mysql::MySqlRow, Row, query
     }, 
     Database,
     Connection
@@ -92,7 +92,7 @@ impl<'r> FromRequest<'r> for &'r ExistingUser {
                     println!("{}", id_str);
                     match id_str.parse::<i32>() {
                         Ok(id) => {
-                            match sqlx::query("SELECT UserId FROM users WHERE UserId = ?").bind(id).execute(&**db).await {
+                            match query("SELECT UserId FROM users WHERE UserId = ?").bind(id).execute(&**db).await {
                                 Ok(res) => {
                                     println!("{:?}", res);
                                     Some(ExistingUser { user_id: id })
@@ -210,7 +210,7 @@ async fn signup(data: Form<NewUser<'_>>, mut db: Connection<ThreadsDatabase>, co
     let password = data.password.clone();
     let hashed_password = hash_password_to_string(password);
     println!("{}", hashed_password);
-    match sqlx::query("INSERT INTO users (Username, Password) VALUES (?, ?)")
+    match query("INSERT INTO users (Username, Password) VALUES (?, ?)")
         .bind(username)
         .bind(hashed_password)
         .execute(&mut *db)
@@ -218,7 +218,7 @@ async fn signup(data: Form<NewUser<'_>>, mut db: Connection<ThreadsDatabase>, co
     {
         Ok(value) => {
             println!("{:?}", value);
-            match sqlx::query_as::<_, ExistingUser>("SELECT UserId FROM users WHERE Username = ?").bind(username).fetch_one(&mut *db).await {
+            match query_as::<_, ExistingUser>("SELECT UserId FROM users WHERE Username = ?").bind(username).fetch_one(&mut *db).await {
                 Ok(user) => {
                     cookies.add_private(Cookie::new("user_id", user.user_id.to_string()));
                     Ok(Redirect::to("/"))
@@ -267,7 +267,7 @@ async fn signout(_user: &ExistingUser, cookies: &CookieJar<'_>) -> String {
 
 #[get("/getthreads")]
 async fn get_threads(mut db: Connection<ThreadsDatabase>, user: &ExistingUser) -> Result<Json<Vec<Thread>>, BadRequest<String>> {
-    match sqlx::query_as::<_, Thread>("SELECT Floss, Amount FROM threads WHERE UserId = ?").bind(user.user_id).fetch_all(&mut *db).await {
+    match query_as::<_, Thread>("SELECT Floss, Amount FROM threads WHERE UserId = ?").bind(user.user_id).fetch_all(&mut *db).await {
         Ok(value) => {
             Ok(Json(value))
         },
@@ -296,7 +296,7 @@ async fn update_thread(mut db: Connection<ThreadsDatabase>, user: &ExistingUser,
         UpdateThreadOptions::Decrement => "-"
     };
     let statement = format!("UPDATE threads SET Amount = Amount {} 1 WHERE UserId = ? AND Floss = ?", operator);
-    match sqlx::query_as::<_, Thread>("SELECT * FROM threads WHERE UserId = ? AND Floss = ?").bind(user.user_id).bind(data.floss).fetch_optional(&mut *db).await {
+    match query_as::<_, Thread>("SELECT * FROM threads WHERE UserId = ? AND Floss = ?").bind(user.user_id).bind(data.floss).fetch_optional(&mut *db).await {
         Ok(value) => {
             match value {
                 Some(thread) => {
