@@ -341,10 +341,7 @@ async fn test_html() -> RawHtml<String> {
 #[get("/<file..>", rank = 3)]
 async fn build_dir(file: PathBuf) -> io::Result<NamedFile> {
     println!("any file: {file:?}");
-    if Path::is_dir(&Path::new(relative!("src")).join(&file)) {
-        println!("in dir");
-    }
-    NamedFile::open(Path::new(relative!("src")).join(file)).await
+    NamedFile::open(Path::new("../src/").join(file)).await
 }
 
 
