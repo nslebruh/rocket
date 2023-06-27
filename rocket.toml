@@ -5,5 +5,3 @@ max_connections = 1024
 connect_timeout = 5
 idle_timeout = 120
 
-[release]
-secret_key="bwWGvR+N91hx4a79oeHFEStJ4voUtNiNCk5CYo1DNlU="
