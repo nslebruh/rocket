@@ -166,8 +166,8 @@ fn oops(_: &Request) -> &'static str {
 }
 
 #[get("/")]
-async fn index(_user: &ExistingUser) -> io::Result<NamedFile> {
-    NamedFile::open("main_page.html").await
+async fn index(_user: &ExistingUser) -> RawHtml<String> {
+    RawHtml(include_str!("../main_page.html").to_string())
 }
 
 #[get("/", rank = 2)]
@@ -176,8 +176,8 @@ async fn login_redirect() -> Redirect {
 }
 
 #[get("/login")]
-async fn login_page() -> io::Result<NamedFile> {
-    NamedFile::open("login.html").await
+async fn login_page() -> RawHtml<String> {
+    RawHtml(include_str!("../login.html").to_string())
 }
 
 #[post("/login", data="<data>")]
