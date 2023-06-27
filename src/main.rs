@@ -7,7 +7,7 @@ use rocket::{
     fairing::{Info, Fairing, Kind},
     http::{Header, CookieJar, Cookie},
     request::{self, FromRequest, Outcome},
-    response::{status::BadRequest, content::RawHtml, Redirect},
+    response::{status::BadRequest, content::RawHtml, Redirect, },
     form::Form, fs::{NamedFile, relative}, serde::json::Json
 };
 use rocket_db_pools::{
@@ -337,6 +337,15 @@ async fn test_html() -> RawHtml<String> {
     RawHtml(String::from(include_str!("../test.html")))
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default, Responder)]
+#[response(status = 200, content_type = "image/x-icon")]
+struct Favicon(&'static [u8]);
+
+#[get("/favicon.ico")]
+async fn favicon() -> Favicon {
+    Favicon(include_bytes!("../favicon.ico"))
+}
+
 #[get("/<file..>", rank = 3)]
 async fn build_dir(file: PathBuf) -> io::Result<NamedFile> {
     println!("any file: ./{}", file.to_str().unwrap());
@@ -349,7 +358,7 @@ fn rocket() -> _ {
     rocket::build()
         .attach(ThreadsDatabase::init())
         .attach(Cors)
-        .mount("/", routes![all_options, index, login_page, login, signup, signout, get_threads, test_html, build_dir, update_thread, login_redirect])
+        .mount("/", routes![all_options, index, login_page, login, signup, signout, get_threads, test_html, build_dir, update_thread, login_redirect, favicon])
         .register("/", catchers![not_found, oops])
 }
 
