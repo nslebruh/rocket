@@ -1,6 +1,7 @@
 use std::{fmt::Display, path::{PathBuf, Path}, io};
 use argon2::Argon2;
 use hex::encode;
+use std::fs;
 
 use rocket::{
     fairing::{Info, Fairing, Kind},
@@ -346,6 +347,12 @@ async fn build_dir(file: PathBuf) -> io::Result<NamedFile> {
 
 #[launch]
 fn rocket() -> _ {
+    let paths = fs::read_dir("./").unwrap();
+    
+    for path in paths {
+        println!("Name: {}", path.unwrap().path().display())
+    }
+
     rocket::build()
         .attach(ThreadsDatabase::init())
         .attach(Cors)
