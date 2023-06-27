@@ -347,10 +347,10 @@ async fn build_dir(file: PathBuf) -> io::Result<NamedFile> {
 
 #[launch]
 fn rocket() -> _ {
-    let paths = fs::read_dir("/").unwrap();
-    
-    for path in paths {
-        println!("Name: {}", path.unwrap().path().display())
+    use walkdir::WalkDir;
+
+    for entry in WalkDir::new("./").into_iter().filter_map(|e| e.ok()) {
+        println!("{}", entry.path().display());
     }
 
     rocket::build()
