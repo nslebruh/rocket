@@ -340,7 +340,7 @@ async fn test_html() -> RawHtml<String> {
 #[get("/<file..>", rank = 3)]
 async fn build_dir(file: PathBuf) -> io::Result<NamedFile> {
     println!("any file: {file:?}");
-    NamedFile::open(file).await
+    NamedFile::open(Path::new("./").join(file)).await
 }
 
 
