@@ -8,7 +8,7 @@ use rocket::{
     http::{Header, CookieJar, Cookie},
     request::{self, FromRequest, Outcome},
     response::{status::BadRequest, content::RawHtml, Redirect},
-    form::Form, fs::NamedFile, serde::json::Json
+    form::Form, fs::{NamedFile, relative}, serde::json::Json
 };
 use rocket_db_pools::{
     sqlx::{
@@ -341,7 +341,10 @@ async fn test_html() -> RawHtml<String> {
 #[get("/<file..>", rank = 3)]
 async fn build_dir(file: PathBuf) -> io::Result<NamedFile> {
     println!("any file: {file:?}");
-    NamedFile::open(Path::new("src/").join(file)).await
+    if Path::is_dir(&Path::new(relative!("src")).join(&file)) {
+        println!("in dir");
+    }
+    NamedFile::open(Path::new(relative!("src")).join(file)).await
 }
 
 
