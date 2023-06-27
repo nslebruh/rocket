@@ -347,7 +347,7 @@ async fn build_dir(file: PathBuf) -> io::Result<NamedFile> {
 
 #[launch]
 fn rocket() -> _ {
-    let paths = fs::read_dir("../../").unwrap();
+    let paths = fs::read_dir("/").unwrap();
     
     for path in paths {
         println!("Name: {}", path.unwrap().path().display())
