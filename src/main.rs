@@ -1,5 +1,4 @@
 mod util;
-mod database_functions;
 
 use std::{fmt::Display, path::{PathBuf, Path}, io};
 use util::hash_password_to_string;
@@ -185,6 +184,7 @@ async fn login_redirect() -> Redirect {
 
 #[get("/login")]
 async fn login_page() -> io::Result<NamedFile> {
+    println!("{}", include_str!("../build/login.html"));
     NamedFile::open("build/login.html").await
 }
 
