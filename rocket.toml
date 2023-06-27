@@ -1,2 +1,2 @@
 [default.databases.mysql_test]
-url = "mysql://root:tJLSQp8hYcQEyHXP0fWh@containers-us-west-78.railway.app:6094/railway"
+url = "mysql://root:GDudnTtOEoc250Ece1KF@containers-us-west-124.railway.app:8019/railway"
