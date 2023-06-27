@@ -174,7 +174,7 @@ fn oops(_: &Request) -> &'static str {
 
 #[get("/")]
 async fn index(_user: &ExistingUser) -> io::Result<NamedFile> {
-    NamedFile::open("build/main_page.html").await
+    NamedFile::open("../build/main_page.html").await
 }
 
 #[get("/", rank = 2)]
@@ -185,7 +185,7 @@ async fn login_redirect() -> Redirect {
 #[get("/login")]
 async fn login_page() -> io::Result<NamedFile> {
     println!("{}", include_str!("../build/login.html"));
-    NamedFile::open("build/login.html").await
+    NamedFile::open("../build/login.html").await
 }
 
 #[post("/login", data="<data>")]
@@ -370,11 +370,11 @@ async fn test_html() -> RawHtml<String> {
 #[get("/<file..>", rank = 3)]
 async fn build_dir(file: PathBuf) -> io::Result<NamedFile> {
     println!("{file:?}");
-    NamedFile::open(Path::new("build/").join(file)).await
+    NamedFile::open(Path::new("../build/").join(file)).await
 }
 #[get("/static/<file..>", rank = 2)]
 async fn static_dir(file: PathBuf) -> io::Result<NamedFile> {
-    NamedFile::open(Path::new("build/static/").join(file)).await
+    NamedFile::open(Path::new("../build/static/").join(file)).await
 }
 
 
