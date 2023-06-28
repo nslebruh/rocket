@@ -154,7 +154,7 @@ impl <'r> From<NewUser<'r>> for String {
 
 #[options("/<_..>")]
 fn all_options() {
-    /* Intentionally left empty */
+    // Intentionally left empty 
 }
 
 #[catch(404)]
@@ -183,17 +183,18 @@ async fn login_page() -> RawHtml<String> {
 }
 
 #[post("/login", data="<data>")]
-async fn login(data: Form<NewUser<'_>>, cookies: &CookieJar<'_>, mut db: Connection<ThreadsDatabase>) -> Result<Redirect, BadRequest<String>> {
+async fn login(data: Form<NewUser<'_>>, cookies: &CookieJar<'_>, mut db: Connection<ThreadsDatabase>) -> Redirect {
     let username = data.username.clone();
     let password = data.password.clone();
     let hashed_password = hash_password_to_string(password);
     match query_as::<_, ExistingUser>("SELECT Id FROM users WHERE Username = ? AND Password = ?").bind(username).bind(hashed_password).fetch_one(&mut *db).await {
         Ok(value) => {
             cookies.add_private(Cookie::new("user_id", value.user_id.to_string()));
-            Ok(Redirect::to("/"))
+            Redirect::to("/")
         },
         Err(error) => {
-            Err(BadRequest(Some(format!("login error: {}", error.to_string()))))
+            println!("login error: {}", error.to_string());
+            Redirect::to("/login")
         }
     }
 }
