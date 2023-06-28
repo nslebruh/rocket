@@ -3,5 +3,7 @@ CREATE TABLE IF NOT EXISTS threads (
   UserId int NOT NULL,
   Floss int NOT NULL,
   Amount int NOT NULL,
+  Name VARCHAR(255) NOT NULL,
+  Color VARCHAR(512) NOT NULL, 
   PRIMARY KEY (Id)
 )

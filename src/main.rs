@@ -66,7 +66,7 @@ pub struct ExistingUser {
 impl FromRow<'_, MySqlRow> for ExistingUser {
     fn from_row(row: &'_ MySqlRow) -> Result<Self, sqlx::Error> {
         Ok(Self {
-            user_id: row.try_get("UserId")?
+            user_id: row.try_get("Id")?
         })
     }
 }
@@ -84,7 +84,7 @@ impl<'r> FromRequest<'r> for &'r ExistingUser {
                     println!("{}", id_str);
                     match id_str.parse::<i32>() {
                         Ok(id) => {
-                            match query("SELECT UserId FROM users WHERE UserId = ?").bind(id).execute(&**db).await {
+                            match query("SELECT Id FROM users WHERE Id = ?").bind(id).execute(&**db).await {
                                 Ok(res) => {
                                     println!("{:?}", res);
                                     Some(ExistingUser { user_id: id })
@@ -115,19 +115,21 @@ impl<'r> FromRequest<'r> for &'r ExistingUser {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Thread {
-    #[serde(rename = "floss")]
     pub floss: i32,
-    #[serde(rename = "amount")]
     pub amount: i32,
+    pub name: String,
+    pub color: String,
 }
 
 impl FromRow<'_, MySqlRow> for Thread {
     fn from_row(row: &'_ MySqlRow) -> Result<Self, sqlx::Error> {
         Ok(Self {
             floss: row.try_get("Floss")?,
-            amount: row.try_get("Amount")?
+            amount: row.try_get("Amount")?,
+            name: row.try_get("Name")?,
+            color: row.try_get("Color")?,
         })
     }
 }
@@ -185,7 +187,7 @@ async fn login(data: Form<NewUser<'_>>, cookies: &CookieJar<'_>, mut db: Connect
     let username = data.username.clone();
     let password = data.password.clone();
     let hashed_password = hash_password_to_string(password);
-    match query_as::<_, ExistingUser>("SELECT UserId FROM users WHERE Username = ? AND Password = ?").bind(username).bind(hashed_password).fetch_one(&mut *db).await {
+    match query_as::<_, ExistingUser>("SELECT Id FROM users WHERE Username = ? AND Password = ?").bind(username).bind(hashed_password).fetch_one(&mut *db).await {
         Ok(value) => {
             cookies.add_private(Cookie::new("user_id", value.user_id.to_string()));
             Ok(Redirect::to("/"))
@@ -210,7 +212,7 @@ async fn signup(data: Form<NewUser<'_>>, mut db: Connection<ThreadsDatabase>, co
     {
         Ok(value) => {
             println!("{:?}", value);
-            match query_as::<_, ExistingUser>("SELECT UserId FROM users WHERE Username = ?").bind(username).fetch_one(&mut *db).await {
+            match query_as::<_, ExistingUser>("SELECT Id FROM users WHERE Username = ?").bind(username).fetch_one(&mut *db).await {
                 Ok(user) => {
                     cookies.add_private(Cookie::new("user_id", user.user_id.to_string()));
                     Ok(Redirect::to("/"))
@@ -346,19 +348,13 @@ async fn favicon() -> Favicon {
     Favicon(include_bytes!("../favicon.ico"))
 }
 
-#[get("/<file..>", rank = 3)]
-async fn build_dir(file: PathBuf) -> io::Result<NamedFile> {
-    println!("any file: ./{}", file.to_str().unwrap());
-    NamedFile::open(Path::new("../app/").join(file)).await
-}
-
 
 #[launch]
 fn rocket() -> _ {
     rocket::build()
         .attach(ThreadsDatabase::init())
         .attach(Cors)
-        .mount("/", routes![all_options, index, login_page, login, signup, signout, get_threads, test_html, build_dir, update_thread, login_redirect, favicon])
+        .mount("/", routes![all_options, index, login_page, login, signup, signout, get_threads, test_html,  update_thread, login_redirect, favicon])
         .register("/", catchers![not_found, oops])
 }
 
