@@ -193,7 +193,7 @@ async fn login(data: Form<NewUser<'_>>, cookies: &CookieJar<'_>, mut db: Connect
             Ok(Redirect::to("/"))
         },
         Err(error) => {
-            Err(BadRequest(Some(error.to_string())))
+            Err(BadRequest(Some(format!("login error: {}", error.to_string()))))
         }
     }
 }
@@ -218,14 +218,12 @@ async fn signup(data: Form<NewUser<'_>>, mut db: Connection<ThreadsDatabase>, co
                     Ok(Redirect::to("/"))
                 },
                 Err(error) => {
-                    println!("select user id error");
-                    Err(BadRequest(Some(error.to_string())))
+                    Err(BadRequest(Some(format!("select user id error: {}", error.to_string()))))
                 }
             }
         },
         Err(error) => {
-            println!("{}", error);
-            Err(BadRequest(Some(error.to_string())))
+            Err(BadRequest(Some(format!("signup error: {}", error.to_string()))))
         }
     }
 }
