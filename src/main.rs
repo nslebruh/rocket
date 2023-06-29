@@ -1,14 +1,13 @@
-use std::{fmt::Display, path::{PathBuf, Path}, io};
+use std::fmt::Display;
 use argon2::Argon2;
 use hex::encode;
-use std::fs;
 
 use rocket::{
     fairing::{Info, Fairing, Kind},
     http::{Header, CookieJar, Cookie},
     request::{self, FromRequest, Outcome},
     response::{status::BadRequest, content::RawHtml, Redirect, },
-    form::Form, fs::{NamedFile, relative}, serde::json::Json
+    form::Form, serde::json::Json
 };
 use rocket_db_pools::{
     sqlx::{
@@ -29,9 +28,6 @@ use serde::{Deserialize, Serialize};
 #[macro_use]
 extern crate rocket;
 extern crate rocket_db_pools;
-
-
-
 
 #[derive(Database)]
 #[database("mysql_test")]
@@ -66,7 +62,7 @@ pub struct ExistingUser {
 impl FromRow<'_, MySqlRow> for ExistingUser {
     fn from_row(row: &'_ MySqlRow) -> Result<Self, sqlx::Error> {
         Ok(Self {
-            user_id: row.try_get("Id")?
+            user_id: row.try_get("id")?
         })
     }
 }
@@ -78,31 +74,40 @@ impl<'r> FromRequest<'r> for &'r ExistingUser {
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         let user_result: &Option<ExistingUser> = req.local_cache_async(async {
             let db = req.guard::<&ThreadsDatabase>().await.succeeded().unwrap();
-            match req.cookies().get_private("user_id") {
-                Some(value) => {
-                    let id_str = value.value();
-                    println!("{}", id_str);
-                    match id_str.parse::<i32>() {
-                        Ok(id) => {
-                            match query("SELECT Id FROM users WHERE Id = ?").bind(id).execute(&**db).await {
-                                Ok(res) => {
-                                    println!("{:?}", res);
-                                    Some(ExistingUser { user_id: id })
-                                },
-                                Err(error) => {
-                                    println!("{}", error);
-                                    None
-                                }
-                            }
-                        },
-                        Err(error) => {
-                            println!("{}", error);
-                            None
-                        }
+            if let Some(value) = req.cookies().get_private("user_id") {
+                if let Ok(id) = value.value().parse::<i32>() {
+                    if let Ok(res) = query("SELECT id FROM users WHERE id = ?").bind(id).execute(&**db).await {
+                        println!("{:?}", res);
+                        return Some(ExistingUser { user_id: id })
                     }
-                },
-                None => {None}
+                }   
             }
+            None
+            //match req.cookies().get_private("user_id") {
+            //    Some(value) => {
+            //        let id_str = value.value();
+            //        println!("{}", id_str);
+            //        match id_str.parse::<i32>() {
+            //            Ok(id) => {
+            //                match query("SELECT id FROM users WHERE id = ?").bind(id).execute(&**db).await {
+            //                    Ok(res) => {
+            //                        println!("{:?}", res);
+            //                        Some(ExistingUser { user_id: id })
+            //                    },
+            //                    Err(error) => {
+            //                        println!("{}", error);
+            //                        None
+            //                    }
+            //                }
+            //            },
+            //            Err(error) => {
+            //                println!("{}", error);
+            //                None
+            //            }
+            //        }
+            //    },
+            //    None => {None}
+            //}
         }).await;
         match user_result {
             Some(value) => {
@@ -126,10 +131,10 @@ pub struct Thread {
 impl FromRow<'_, MySqlRow> for Thread {
     fn from_row(row: &'_ MySqlRow) -> Result<Self, sqlx::Error> {
         Ok(Self {
-            floss: row.try_get("Floss")?,
-            amount: row.try_get("Amount")?,
-            name: row.try_get("Name")?,
-            color: row.try_get("Color")?,
+            floss: row.try_get("floss")?,
+            amount: row.try_get("amount")?,
+            name: row.try_get("name")?,
+            color: row.try_get("color")?,
         })
     }
 }
@@ -151,6 +156,22 @@ impl <'r> From<NewUser<'r>> for String {
         format!("{{\"data\": \"username: {}, password: {}\"}}", value.username, value.password)
     }
 }
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub enum UpdateThreadOptions {
+    Increment = 0,
+    Decrement = 1
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateThreadMessage {
+    floss: i32,
+    name: String,
+    color: String,
+    action: UpdateThreadOptions
+}
+
+
 
 #[options("/<_..>")]
 fn all_options() {
@@ -187,7 +208,7 @@ async fn login(data: Form<NewUser<'_>>, cookies: &CookieJar<'_>, mut db: Connect
     let username = data.username.clone();
     let password = data.password.clone();
     let hashed_password = hash_password_to_string(password);
-    match query_as::<_, ExistingUser>("SELECT Id FROM users WHERE Username = ? AND Password = ?").bind(username).bind(hashed_password).fetch_one(&mut *db).await {
+    match query_as::<_, ExistingUser>("SELECT id FROM users WHERE username = ? AND password = ?").bind(username).bind(hashed_password).fetch_one(&mut *db).await {
         Ok(value) => {
             cookies.add_private(Cookie::new("user_id", value.user_id.to_string()));
             Redirect::to("/")
@@ -204,16 +225,16 @@ async fn signup(data: Form<NewUser<'_>>, mut db: Connection<ThreadsDatabase>, co
     let username = data.username.clone();
     let password = data.password.clone();
     let hashed_password = hash_password_to_string(password);
-    println!("{}", hashed_password);
-    match query("INSERT INTO users (Username, Password) VALUES (?, ?)")
+    println!("hashed_password: {}", hashed_password);
+    match query("INSERT INTO users (username, password) VALUES (?, ?)")
         .bind(username)
         .bind(hashed_password)
         .execute(&mut *db)
         .await 
     {
         Ok(value) => {
-            println!("{:?}", value);
-            match query_as::<_, ExistingUser>("SELECT Id FROM users WHERE Username = ?").bind(username).fetch_one(&mut *db).await {
+            println!("signup mySqlQueryResult: {:?}", value);
+            match query_as::<_, ExistingUser>("SELECT id FROM users WHERE username = ?").bind(username).fetch_one(&mut *db).await {
                 Ok(user) => {
                     cookies.add_private(Cookie::new("user_id", user.user_id.to_string()));
                     Ok(Redirect::to("/"))
@@ -237,7 +258,7 @@ async fn signout(_user: &ExistingUser, cookies: &CookieJar<'_>) -> String {
 
 #[get("/getthreads")]
 async fn get_threads(mut db: Connection<ThreadsDatabase>, user: &ExistingUser) -> Result<Json<Vec<Thread>>, BadRequest<String>> {
-    match query_as::<_, Thread>("SELECT Floss, Amount FROM threads WHERE UserId = ?").bind(user.user_id).fetch_all(&mut *db).await {
+    match query_as::<_, Thread>("SELECT floss, amount, name, color FROM threads WHERE userId = ?").bind(user.user_id).fetch_all(&mut *db).await {
         Ok(value) => {
             Ok(Json(value))
         },
@@ -247,32 +268,20 @@ async fn get_threads(mut db: Connection<ThreadsDatabase>, user: &ExistingUser) -
     }
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
-pub enum UpdateThreadOptions {
-    Increment = 0,
-    Decrement = 1
-}
-
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-pub struct UpdateThreadMessage {
-    floss: i32,
-    action: UpdateThreadOptions
-}
-
 #[post("/updatethread", data = "<data>")]
 async fn update_thread(mut db: Connection<ThreadsDatabase>, user: &ExistingUser, data: Json<UpdateThreadMessage>) -> Result<String, BadRequest<String>> {
     let operator = match data.action {
         UpdateThreadOptions::Increment => "+",
         UpdateThreadOptions::Decrement => "-"
     };
-    let statement = format!("UPDATE threads SET Amount = Amount {} 1 WHERE UserId = ? AND Floss = ?", operator);
-    match query_as::<_, Thread>("SELECT * FROM threads WHERE UserId = ? AND Floss = ?").bind(user.user_id).bind(data.floss).fetch_optional(&mut *db).await {
+    let statement = format!("UPDATE threads SET amount = amount {} 1 WHERE userId = ? AND floss = ?", operator);
+    match query_as::<_, Thread>("SELECT * FROM threads WHERE userId = ? AND floss = ?").bind(user.user_id).bind(data.floss).fetch_optional(&mut *db).await {
         Ok(value) => {
             match value {
                 Some(thread) => {
                     match (thread.amount, data.action) {
                         (1, UpdateThreadOptions::Decrement) => {
-                            match sqlx::query("DELETE FROM threads WHERE UserId = ? AND Floss = ?").bind(user.user_id).bind(data.floss).execute(&mut *db).await {
+                            match sqlx::query("DELETE FROM threads WHERE userId = ? AND floss = ?").bind(user.user_id).bind(data.floss).execute(&mut *db).await {
                                 Ok(value) => {
                                     Ok(format!("{value:?}"))
                                 },
@@ -297,7 +306,7 @@ async fn update_thread(mut db: Connection<ThreadsDatabase>, user: &ExistingUser,
                     println!("No thread");
                    match data.action {
                     UpdateThreadOptions::Increment => {
-                        match sqlx::query("INSERT INTO threads (UserId, Floss, Amount) VALUES (?, ?, 1)").bind(user.user_id).bind(data.floss).execute(&mut *db).await {
+                        match sqlx::query("INSERT INTO threads (userId, floss, amount) VALUES (?, ?, 1)").bind(user.user_id).bind(data.floss).execute(&mut *db).await {
                             Ok(value) => {
                                 Ok(format!("{value:?}"))
                             },
