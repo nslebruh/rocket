@@ -110,12 +110,8 @@ impl<'r> FromRequest<'r> for &'r ExistingUser {
             //}
         }).await;
         match user_result {
-            Some(value) => {
-                Outcome::Success(value)
-            },
-            None => {
-                Outcome::Forward(())
-            }
+            Some(value) => Outcome::Success(value),
+            None => Outcome::Forward(())
         }
     }
 }
@@ -356,13 +352,21 @@ async fn favicon() -> Favicon {
     Favicon(include_bytes!("../favicon.ico"))
 }
 
+#[get("/test")]
+async fn test(mut db: Connection<ThreadsDatabase>) {
+    match query("CALL InsertUserAndGetId('myUsername', 'myPassword', @out);
+    SELECT @out;").execute(&mut *db).await {
+        Ok(res) => println!("res: {:#?}", res),
+        Err(err) => println!("err: {:#?}", err) 
+    }
+}
 
 #[launch]
 fn rocket() -> _ {
     rocket::build()
         .attach(ThreadsDatabase::init())
         .attach(Cors)
-        .mount("/", routes![all_options, index, login_page, login, signup, signout, get_threads, test_html,  update_thread, login_redirect, favicon])
+        .mount("/", routes![all_options, index, login_page, login, signup, signout, get_threads, test_html,  update_thread, login_redirect, favicon, test])
         .register("/", catchers![not_found, oops])
 }
 
