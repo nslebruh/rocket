@@ -266,62 +266,67 @@ async fn get_threads(mut db: Connection<ThreadsDatabase>, user: &ExistingUser) -
 
 #[post("/updatethread", data = "<data>")]
 async fn update_thread(mut db: Connection<ThreadsDatabase>, user: &ExistingUser, data: Json<UpdateThreadMessage>) -> Result<String, BadRequest<String>> {
-    let operator = match data.action {
-        UpdateThreadOptions::Increment => "+",
-        UpdateThreadOptions::Decrement => "-"
-    };
-    let statement = format!("UPDATE threads SET amount = amount {} 1 WHERE userId = ? AND floss = ?", operator);
-    match query_as::<_, Thread>("SELECT * FROM threads WHERE userId = ? AND floss = ?").bind(user.user_id).bind(data.floss).fetch_optional(&mut *db).await {
-        Ok(value) => {
-            match value {
-                Some(thread) => {
-                    match (thread.amount, data.action) {
-                        (1, UpdateThreadOptions::Decrement) => {
-                            match sqlx::query("DELETE FROM threads WHERE userId = ? AND floss = ?").bind(user.user_id).bind(data.floss).execute(&mut *db).await {
-                                Ok(value) => {
-                                    Ok(format!("{value:?}"))
-                                },
-                                Err(error) => {
-                                    Err(BadRequest(Some(error.to_string())))
-                                }
-                            }
-                        },
-                        (_, _) => {
-                            match sqlx::query(&statement).bind(user.user_id).bind(data.floss).execute(&mut *db).await {
-                                Ok(value) => {
-                                    Ok(format!("{value:?}"))
-                                },
-                                Err(error) => {
-                                    Err(BadRequest(Some(error.to_string())))
-                                }
-                            }
-                        },
-                    }
-                },
-                None => {
-                    println!("No thread");
-                   match data.action {
-                    UpdateThreadOptions::Increment => {
-                        match sqlx::query("INSERT INTO threads (userId, floss, amount) VALUES (?, ?, 1)").bind(user.user_id).bind(data.floss).execute(&mut *db).await {
-                            Ok(value) => {
-                                Ok(format!("{value:?}"))
-                            },
-                            Err(error) => {
-                                Err(BadRequest(Some(error.to_string())))
-                            }
-                        }
-                    },
-                    UpdateThreadOptions::Decrement => {
-                        Err(BadRequest(Some(String::from("Unable to decrement a non-existent thread"))))
-                    } 
-                   }
-                }
-            }
-        },
-        Err(error) => {
-            Err(BadRequest(Some(error.to_string())))
-        }
+    match query("ModifyThreadAmount(?, ?, ?, ?, ?);").bind(user.user_id).bind(data.floss).bind(data.name.clone()).bind(data.color.clone()).bind(if data.action == UpdateThreadOptions::Increment {true} else {false}).execute(&mut *db).await {
+        Ok(res) => Ok(format!("{res:#?}")),
+        Err(err) => Err(BadRequest(Some(err.to_string())))
+
     }
+    //let operator = match data.action {
+    //    UpdateThreadOptions::Increment => "+",
+    //    UpdateThreadOptions::Decrement => "-"
+    //};
+    //let statement = format!("UPDATE threads SET amount = amount {} 1 WHERE userId = ? AND floss = ?", operator);
+    //match query_as::<_, Thread>("SELECT * FROM threads WHERE userId = ? AND floss = ?").bind(user.user_id).bind(data.floss).fetch_optional(&mut *db).await {
+    //    Ok(value) => {
+    //        match value {
+    //            Some(thread) => {
+    //                match (thread.amount, data.action) {
+    //                    (1, UpdateThreadOptions::Decrement) => {
+    //                        match sqlx::query("DELETE FROM threads WHERE userId = ? AND floss = ?").bind(user.user_id).bind(data.floss).execute(&mut *db).await {
+    //                            Ok(value) => {
+    //                                Ok(format!("{value:?}"))
+    //                            },
+    //                            Err(error) => {
+    //                                Err(BadRequest(Some(error.to_string())))
+    //                            }
+    //                        }
+    //                    },
+    //                    (_, _) => {
+    //                        match sqlx::query(&statement).bind(user.user_id).bind(data.floss).execute(&mut *db).await {
+    //                            Ok(value) => {
+    //                                Ok(format!("{value:?}"))
+    //                            },
+    //                            Err(error) => {
+    //                                Err(BadRequest(Some(error.to_string())))
+    //                            }
+    //                        }
+    //                    },
+    //                }
+    //            },
+    //            None => {
+    //                println!("No thread");
+    //               match data.action {
+    //                UpdateThreadOptions::Increment => {
+    //                    match sqlx::query("INSERT INTO threads (userId, floss, amount) VALUES (?, ?, 1)").bind(user.user_id).bind(data.floss).execute(&mut *db).await {
+    //                        Ok(value) => {
+    //                            Ok(format!("{value:?}"))
+    //                        },
+    //                        Err(error) => {
+    //                            Err(BadRequest(Some(error.to_string())))
+    //                        }
+    //                    }
+    //                },
+    //                UpdateThreadOptions::Decrement => {
+    //                    Err(BadRequest(Some(String::from("Unable to decrement a non-existent thread"))))
+    //                } 
+    //               }
+    //            }
+    //        }
+    //    },
+    //    Err(error) => {
+    //        Err(BadRequest(Some(error.to_string())))
+    //    }
+    //}
 }
 
 //#[post("/updatethreads", data="<data>")]
