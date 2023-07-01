@@ -247,7 +247,12 @@ async fn signup(data: Form<NewUser<'_>>, mut db: Connection<ThreadsDatabase>, co
 }
 
 #[post("/signout")]
-async fn signout(_user: &ExistingUser, cookies: &CookieJar<'_>) -> String {
+async fn signout_post(_user: &ExistingUser, cookies: &CookieJar<'_>) -> String {
+    cookies.remove_private(Cookie::named("user_id"));
+    format!("Successfully signed out")
+}
+#[get("/signout")]
+async fn signout_get(_user: &ExistingUser, cookies: &CookieJar<'_>) -> String {
     cookies.remove_private(Cookie::named("user_id"));
     format!("Successfully signed out")
 }
@@ -372,7 +377,7 @@ fn rocket() -> _ {
     rocket::build()
         .attach(ThreadsDatabase::init())
         .attach(Cors)
-        .mount("/", routes![all_options, index, login_page, login, signup, signout, get_threads, test_html,  update_thread, login_redirect, favicon, test])
+        .mount("/", routes![all_options, index, login_page, login, signup, get_threads, test_html,  update_thread, login_redirect, favicon, test, signout_get, signout_post])
         .register("/", catchers![not_found, oops])
 }
 
