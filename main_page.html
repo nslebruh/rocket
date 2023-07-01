@@ -314,7 +314,9 @@
             },
             body: JSON.stringify({
               floss: parseInt(item.floss),
-              action: "Increment"
+              action: "Increment",
+              name: item.name,
+              color: item.color
             })
           }).then((result) => {
             console.log(result.ok)
@@ -335,7 +337,9 @@
             },
             body: JSON.stringify({
               floss: parseInt(item.floss),
-              action: "Decrement"
+              action: "Decrement",
+              name: item.name,
+              color: item.color
             })
           }).then((result) => {
             console.log(result.ok)
