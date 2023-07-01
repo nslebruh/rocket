@@ -266,7 +266,8 @@ async fn get_threads(mut db: Connection<ThreadsDatabase>, user: &ExistingUser) -
 
 #[post("/updatethread", data = "<data>")]
 async fn update_thread(mut db: Connection<ThreadsDatabase>, user: &ExistingUser, data: Json<UpdateThreadMessage>) -> Result<String, BadRequest<String>> {
-    match query("CALL ModifyThreadAmount(?, ?, ?, ?, ?);").bind(user.user_id).bind(data.floss).bind(data.name.clone()).bind(data.color.clone()).bind(if data.action == UpdateThreadOptions::Increment {true} else {false}).execute(&mut *db).await {
+    let action = if data.action == UpdateThreadOptions::Increment {true} else {false};
+    match query("CALL ModifyThreadAmount(?, ?, ?, ?, ?);").bind(user.user_id).bind(data.floss).bind(data.name.clone()).bind(data.color.clone()).bind(action).execute(&mut *db).await {
         Ok(res) => Ok(format!("{res:#?}")),
         Err(err) => Err(BadRequest(Some(err.to_string())))
 
