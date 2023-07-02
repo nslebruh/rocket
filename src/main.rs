@@ -335,17 +335,27 @@ async fn update_thread(mut db: Connection<ThreadsDatabase>, user: &ExistingUser,
     //}
 }
 
-//#[post("/updatethreads", data="<data>")]
-//fn update_threads(mut db: Connection<ThreadsDatabase>, user: &ExistingUser, data: Json<Vec<UpdateThreadMessage>>) {
-//    let sql: String = String::new();
-//    for thread in data.iter() {
-//        let operator = match thread.action {
-//            UpdateThreadOptions::Increment => "+",
-//            UpdateThreadOptions::Decrement => "-"
-//        };
-//        let statement = format!("UPDATE threads SET Amount = Amount {} 1 WHERE UserId = ? AND Floss = ?;", operator);
-//    }
-//}
+#[post("/updatethreads", data="<data>")]
+async fn update_threads(mut db: Connection<ThreadsDatabase>, user: &ExistingUser, data: Json<Vec<Thread>>) {
+    let mut sql: String = "INSERT INTO threads (userId, floss, amount, name, color) VALUES".to_owned();
+    for i in 0..data.len() {
+        let thread = data[i].to_owned();
+        sql.push_str(format!("({}, {}, {}, \"{}\", \"{}\")", user.user_id, thread.floss, thread.amount, thread.name, thread.color).as_str());
+        if i + 1 != data.len() {
+            sql += ",";
+        }
+    }
+    sql += " AS aliased ON DUPLICATE KEY UPDATE amount = aliased.amount;";
+    println!("{sql}");
+    match query(&sql).execute(&mut *db).await {
+        Ok(res) => {
+            println!("{:#?}", res);
+        },
+        Err(err) => {
+            println!("{:#?}", err);
+        }
+    }
+}
 
 
 #[get("/testhtml")]
@@ -363,21 +373,13 @@ async fn favicon() -> Favicon {
     Favicon(include_bytes!("../favicon.ico"))
 }
 
-#[get("/test")]
-async fn test(mut db: Connection<ThreadsDatabase>) {
-    match query("CALL InsertUserAndGetId('myUsername', 'myPassword', @out);
-    SELECT @out;").execute(&mut *db).await {
-        Ok(res) => println!("res: {:#?}", res),
-        Err(err) => println!("err: {:#?}", err) 
-    }
-}
 
 #[launch]
 fn rocket() -> _ {
     rocket::build()
         .attach(ThreadsDatabase::init())
         .attach(Cors)
-        .mount("/", routes![all_options, index, login_page, login, signup, get_threads, test_html,  update_thread, login_redirect, favicon, test, signout_get, signout_post])
+        .mount("/", routes![all_options, index, login_page, login, signup, get_threads, test_html,  update_thread, login_redirect, favicon, signout_get, signout_post, update_threads])
         .register("/", catchers![not_found, oops])
 }
 
