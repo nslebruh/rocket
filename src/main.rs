@@ -91,8 +91,8 @@ impl<'r> FromRequest<'r> for &'r ExistingUser {
                 // parse string into number
                 if let Ok(id) = value.value().parse::<i32>() {
                     // query the database
-                    if let Ok(res) = query("SELECT id FROM users WHERE id = ?").bind(id).execute(&**db).await {
-                        println!("{:?}", res);
+                    if let Ok(_) = query("SELECT id FROM users WHERE id = ?").bind(id).execute(&**db).await {
+                        //println!("{:?}", res);
                         // return existing user if query is successful
                         return Some(ExistingUser { user_id: id })
                     }
@@ -295,20 +295,12 @@ async fn signup(data: Form<NewUser<'_>>, mut db: Connection<ThreadsDatabase>, co
 // signout POST path
 // signs the user out
 // the user already needs to be signed in to sign out
-// probably should return a redirect to the login page but I don't care at this point this is fine
+////probably should return a redirect to the login page but I don't care at this point this is fine
+// now returns a redirect to the login page
 #[post("/signout")]
-async fn signout_post(_user: &ExistingUser, cookies: &CookieJar<'_>) -> String {
+async fn signout(_user: &ExistingUser, cookies: &CookieJar<'_>) -> Redirect {
     cookies.remove_private(Cookie::named("user_id"));
-    format!("Successfully signed out")
-}
-
-// signout GET path
-// also signs the user out
-// does the same as the POST path but this makes it easier for me to implement on the frontend
-#[get("/signout")]
-async fn signout_get(_user: &ExistingUser, cookies: &CookieJar<'_>) -> String {
-    cookies.remove_private(Cookie::named("user_id"));
-    format!("Successfully signed out")
+    Redirect::to("/login")
 }
 
  
@@ -422,7 +414,7 @@ async fn test_html() -> RawHtml<String> {
 }
 
 // Favicon struct so that I can send the website's icon without figuring out how I am actually meant to
-// It literally only contains the bytes of ../favicon.ico
+// It literally only contains the bytes of ../files/favicon.ico
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default, Responder)]
 #[response(status = 200, content_type = "image/x-icon")]
 struct Favicon(&'static [u8]);
@@ -439,7 +431,7 @@ fn rocket() -> _ {
     rocket::build()
         .attach(ThreadsDatabase::init())
         .attach(Cors)
-        .mount("/", routes![all_options, index, login_page, login, signup, get_threads, test_html,  update_thread, login_redirect, favicon, signout_get, signout_post, update_threads])
+        .mount("/", routes![all_options, index, login_page, login, signup, get_threads, test_html,  update_thread, login_redirect, favicon, signout, update_threads])
         .register("/", catchers![not_found, oops])
 }
 

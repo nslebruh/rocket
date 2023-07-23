@@ -11,11 +11,12 @@ services:
   server:
     build:
       context: .
+      dockerfile: Rust.Dockerfile
       target: final
     ports:
       - 8000:8000
     environment:
-      - ROCKET_DATABASES={mysql_test={url="mysql://root:thisisapassword@db:3306/railway",idle_timeout=120}}
+      - ROCKET_DATABASES={mysql_test={url="mysql://root:thisisapassword@db:3306/railway",idle_timeout=120,connect_timeout=30}}
       - ROCKET_SECRET_KEY=bwWGvR+N91hx4a79oeHFEStJ4voUtNiNCk5CYo1DNlU=
   db:
     image: mysql:8.0
@@ -26,7 +27,7 @@ services:
       - MYSQL_DATABASE=railway
       - MYSQL_ROOT_PASSWORD=thisisapassword
     ports:
-      - "3306:3300"
+      - "3306:3306"
     volumes:
       - db:/var/lib/mysql
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
