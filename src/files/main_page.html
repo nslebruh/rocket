@@ -202,23 +202,23 @@
         saveToFile(JSON.stringify(Object.fromEntries(threadsMap)), "threadTrackerData")
       });
 
-    window.addEventListener("beforeunload", (e) => {
-        saveToLocalStorage(JSON.stringify(Object.fromEntries(threadsMap)));
-        let x = [];
-        threadsMap.forEach((value) => {
-          if (value.amount > 0) {
-            x.push(value)
-          }
-        })
-        fetch("updatethreads", {
-          "method": "POST",
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(x)
-        })
-    });
+    //window.addEventListener("beforeunload", (e) => {
+    //    saveToLocalStorage(JSON.stringify(Object.fromEntries(threadsMap)));
+    //    let x = [];
+    //    threadsMap.forEach((value) => {
+    //      if (value.amount > 0) {
+    //        x.push(value)
+    //      }
+    //    })
+    //    fetch("updatethreads", {
+    //      "method": "POST",
+    //      headers: {
+    //        'Accept': 'application/json',
+    //        'Content-Type': 'application/json'
+    //      },
+    //      body: JSON.stringify(x)
+    //    })
+    //});
 
     function getCurrentDate() {
       var now = new Date();
