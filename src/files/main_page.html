@@ -48,14 +48,8 @@
     .name {
       min-width: 40%
     }
-    .button {
-
-    }
     .amount {
       max-width: 10%;
-    }
-    .color {
-      
     }
     #overlay {
       display: none;
@@ -103,11 +97,11 @@
     <label for="search">Search</label>
     <input type="search" name="search" id="search">
     <button id="saveThreads">Save Threads</button>
+    <button id="signout">Signout</button>
+    <button id="clear">Clear threads</button>
+    <button id="clear2">Clear local storage</button>
     <label for="parseThreads">Input Threads File</label>
     <input id='parseThreads' type='file' accept='application/json'>
-    <form action="signout" method="post">
-      <button type="submit">Logout</button>
-    </form>
     <!--<button id="openFormButton">Open Form</button>-->
   </div>
   <ul id="list">
@@ -150,6 +144,27 @@
       */
     let threadsMap = new Map();
     const list = document.getElementById("list");
+
+    document.getElementById("signout").addEventListener("click", async () => {
+      let res = await fetch("signout", {
+        method: "POST",
+        redirect:"follow"
+      });
+      if (res.redirected) {
+        window.location.href = res.url;
+        return
+      } 
+    })
+
+    document.getElementById("clear").addEventListener("click", () => {
+      threadsMap.clear();
+      threadsList.forEach((value) => {threadsMap.set(value.floss, value)})
+      displayList()
+    })
+
+    document.getElementById("clear2").addEventListener("click", () => {
+      
+    })
 
     window.addEventListener("load", async e => {
       fetch("/getthreads").then(async (result) => {
@@ -407,6 +422,9 @@
       }
       document.getElementById("search").addEventListener("input", (e) => {
         searchList(e.target.value)
+      })
+      items.forEach(({listItem, data}) => {
+        threadsMap.set(data.floss, data)
       })
       
       items.forEach(({listItem}) => {

@@ -64,7 +64,7 @@ COPY --from=build /bin/server /bin/
 ENV ROCKET_ADDRESS=0.0.0.0
 
 # Expose the port that the application listens on.
-EXPOSE 8000
+EXPOSE 8024
 
 # What the container should run when it is started.
 CMD ["/bin/server"]

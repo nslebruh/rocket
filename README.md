@@ -1,7 +1,16 @@
 # README 
 
 ## ThreadTracker
+Created by Nathan Le Brun
+VSV ID: 107027
 
+## Installation Instructions
+To run locally:
+1. Download and install Docker Desktop from their [website](https://docs.docker.com/desktop/install/windows-install/).
+2. Run the command `docker compose up`
+3. Go to this local [webpage](http://localhost:8024) 
+ 
+**OR** you can just use the live version [here](https://threads.clompass.com)
 
 ### Testing Techniques
 - Functional testing

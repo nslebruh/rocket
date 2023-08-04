@@ -6,7 +6,7 @@ use rocket::{
     fairing::{Info, Fairing, Kind},
     http::{Header, CookieJar, Cookie},
     request::{self, FromRequest, Outcome},
-    response::{status::BadRequest, content::RawHtml, Redirect, },
+    response::{status::BadRequest, content::RawHtml, Redirect},
     form::Form, serde::json::Json
 };
 use rocket_db_pools::{
@@ -18,8 +18,7 @@ use rocket_db_pools::{
         Row,
         query
     }, 
-    Database,
-    Connection
+    Database, Connection
 };
 
 use rocket::{Request, Response};
@@ -33,7 +32,6 @@ extern crate rocket_db_pools;
 #[derive(Database)] // auto implement the Database trait using a derive macro
 #[database("mysql_test")] // specify name of database
 pub struct ThreadsDatabase(sqlx::MySqlPool);
-
 
 // define empty struct to deal with CORS (NOT MY CODE this is from StackOverflow)
 pub struct Cors;
@@ -61,7 +59,7 @@ impl Fairing for Cors {
 }
 
 // define an existing user struct that can be serialized, deserialized, cloned and extracted from a html form POST request
-#[derive(Deserialize, Serialize, Debug, FromForm, Clone)]
+#[derive(Deserialize, Serialize, Debug, FromForm, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ExistingUser {
     user_id: i32, // contains a single number representing the existing user's ID
 }
@@ -100,32 +98,6 @@ impl<'r> FromRequest<'r> for &'r ExistingUser {
             }
             // return None if any errors occur
             None
-            // old code below
-            //match req.cookies().get_private("user_id") {
-            //    Some(value) => {
-            //        let id_str = value.value();
-            //        println!("{}", id_str);
-            //        match id_str.parse::<i32>() {
-            //            Ok(id) => {
-            //                match query("SELECT id FROM users WHERE id = ?").bind(id).execute(&**db).await {
-            //                    Ok(res) => {
-            //                        println!("{:?}", res);
-            //                        Some(ExistingUser { user_id: id })
-            //                    },
-            //                    Err(error) => {
-            //                        println!("{}", error);
-            //                        None
-            //                    }
-            //                }
-            //            },
-            //            Err(error) => {
-            //                println!("{}", error);
-            //                None
-            //            }
-            //        }
-            //    },
-            //    None => {None}
-            //}
         }).await;
         // match user_result using pattern matching
         // if there is an existing user return a successful outcome with the existing user as the value
@@ -138,7 +110,7 @@ impl<'r> FromRequest<'r> for &'r ExistingUser {
 }
 
 // define thread struct
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Thread {
     pub floss: i32,
     pub amount: i32,
@@ -159,7 +131,7 @@ impl FromRow<'_, MySqlRow> for Thread {
 }
 
 // define new user struct
-#[derive(Deserialize, Serialize, Debug, FromForm, Copy, Clone)]
+#[derive(Deserialize, Serialize, Debug, FromForm, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct NewUser<'r> {
     username: &'r str,
     password: &'r str
@@ -179,22 +151,20 @@ impl <'r> From<NewUser<'r>> for String {
 }
 
 // enum for the way to update a thread
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub enum UpdateThreadOptions {
     Increment = 0,
     Decrement = 1
 }
 
 // struct that contains the update message sent when the increment or decrement button on the front end is clicked
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UpdateThreadMessage {
     floss: i32,
     name: String,
     color: String,
     action: UpdateThreadOptions
 }
-
-
 
 #[options("/<_..>")]
 fn all_options() {
@@ -295,7 +265,7 @@ async fn signup(data: Form<NewUser<'_>>, mut db: Connection<ThreadsDatabase>, co
 // signout POST path
 // signs the user out
 // the user already needs to be signed in to sign out
-////probably should return a redirect to the login page but I don't care at this point this is fine
+//// probably should return a redirect to the login page but I don't care at this point this is fine
 // now returns a redirect to the login page
 #[post("/signout")]
 async fn signout(_user: &ExistingUser, cookies: &CookieJar<'_>) -> Redirect {
@@ -395,13 +365,13 @@ async fn update_threads(mut db: Connection<ThreadsDatabase>, user: &ExistingUser
         }
     }
     sql += " AS aliased ON DUPLICATE KEY UPDATE amount = aliased.amount;";
-    println!("{sql}");
+    //println!("{sql}");
     match query(&sql).execute(&mut *db).await {
         Ok(res) => {
-            println!("{:#?}", res);
+            println!("Post-and-pray result for {:?}: {:?}", user, res);
         },
         Err(err) => {
-            println!("{:#?}", err);
+            println!("Post-and-pray error for {:?}: {:?}", user, err);
         }
     }
 }
